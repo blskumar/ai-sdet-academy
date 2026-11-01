@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI SDET Academy</title>
+<style>
+:root{
+  --bg:#f7f7f4; --panel:#ffffff; --ink:#1c1f23; --muted:#5f6670; --line:#e1e1da;
+  --accent:#2f6b4f; --accent-ink:#ffffff; --accent-soft:#e3f0e9; --warn:#8a5a00; --warn-soft:#fbf1d9;
+  --code-bg:#f0f0ea; --pre-bg:#16191d; --pre-ink:#e8eaed; --focus:#1a73e8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161a; --panel:#1c1f24; --ink:#e8e9ec; --muted:#9aa1ab; --line:#2c3037;
+    --accent:#6fc79a; --accent-ink:#0e1a14; --accent-soft:#1d2f26; --warn:#e5b64a; --warn-soft:#2e2713;
+    --code-bg:#262a31; --pre-bg:#0d0f12; --pre-ink:#e8eaed;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161a; --panel:#1c1f24; --ink:#e8e9ec; --muted:#9aa1ab; --line:#2c3037;
+  --accent:#6fc79a; --accent-ink:#0e1a14; --accent-soft:#1d2f26; --warn:#e5b64a; --warn-soft:#2e2713;
+  --code-bg:#262a31; --pre-bg:#0d0f12; --pre-ink:#e8eaed;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+header.top{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+header.top h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
+.overall{flex:1;min-width:160px;max-width:360px}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.overall small{color:var(--muted);font-size:13px}
+.tools{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:8px;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.layout{display:grid;grid-template-columns:280px 1fr;gap:0;min-height:calc(100vh - 62px)}
+nav.side{border-right:1px solid var(--line);padding:12px;background:var(--panel)}
+nav.side button.ph{display:block;width:100%;text-align:left;border:1px solid transparent;background:none;padding:10px;border-radius:10px;margin-bottom:4px}
+nav.side button.ph:hover{background:var(--accent-soft)}
+nav.side button.ph[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.ph b{display:block;font-size:15px}
+.ph span{font-size:12px;color:var(--muted)}
+.ph .bar{margin-top:6px;height:5px}
+main{padding:20px 24px 60px;max-width:900px;width:100%}
+.phase-head h2{margin:0 0 4px;font-size:26px}
+.phase-head p{margin:4px 0;color:var(--muted)}
+.deliv{margin:12px 0;padding:10px 14px;background:var(--accent-soft);border-radius:10px;font-size:15px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:16px 0;flex-wrap:wrap}
+.tabs button{border:0;background:none;padding:8px 14px;border-bottom:3px solid transparent;color:var(--muted);font-weight:600}
+.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.card>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;font-weight:600}
+.card>summary::-webkit-details-marker{display:none}
+.card>summary::before{content:"\25B8";color:var(--muted);transition:transform .15s}
+.card[open]>summary::before{transform:rotate(90deg)}
+.card .body{padding:0 16px 16px}
+.chip{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--code-bg);color:var(--muted);white-space:nowrap}
+.chip.done{background:var(--accent);color:var(--accent-ink)}
+.grow{flex:1}
+.md h3{margin:18px 0 6px;font-size:18px}
+.md p{margin:8px 0}
+.md ul,.md ol{padding-left:22px;margin:8px 0}
+.md blockquote{margin:10px 0;padding:8px 14px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+code{background:var(--code-bg);padding:1px 5px;border-radius:5px;font:13.5px/1.4 ui-monospace,Consolas,Menlo,monospace}
+pre{background:var(--pre-bg);color:var(--pre-ink);padding:12px 14px;border-radius:10px;overflow:auto;position:relative;margin:10px 0}
+pre code{background:none;padding:0;color:inherit;font-size:13px;white-space:pre}
+.copy{position:absolute;top:6px;right:6px;font-size:12px;padding:2px 8px;background:#ffffff1a;color:#fff;border:1px solid #ffffff40;border-radius:6px}
+.sect{margin-top:18px}
+.sect h4{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.crit label{display:flex;gap:10px;align-items:flex-start;padding:4px 0;cursor:pointer}
+.crit input{margin-top:5px;width:16px;height:16px;accent-color:var(--accent)}
+.hint{margin:8px 0;padding:10px 12px;background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:0 8px 8px 0}
+.hint small{color:var(--warn);font-weight:700}
+.stuck{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.stuck .note{font-size:13px;color:var(--muted)}
+textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:14px/1.5 inherit;resize:vertical}
+.res li{margin:6px 0}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr}
+  nav.side{border-right:0;border-bottom:1px solid var(--line);display:flex;gap:8px;overflow-x:auto;padding:8px 12px}
+  nav.side button.ph{min-width:150px;margin:0}
+  main{padding:16px}
+  .tools{margin-left:0}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>AI SDET Academy</h1>
+  <div class="overall"><div class="bar"><i id="overallBar"></i></div><small id="overallTxt"></small></div>
+  <div class="tools">
+    <button class="btn" data-a="theme" title="Switch light or dark">Theme</button>
+    <button class="btn" data-a="export">Export progress</button>
+    <button class="btn" data-a="import">Import</button>
+    <button class="btn" data-a="reset">Reset</button>
+    <input type="file" id="file" accept="application/json" hidden>
+  </div>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Phases"></nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="content1.js"></script>
+<script src="content2.js"></script>
+<script>
+(function(){
+  var P = window.PHASES;
+  var KEY = "ai-sdet-academy-v1";
+  var view = {phase: P[0].id, tab: "learn"};
+  var HINTS = Object.create(null);
+  P.forEach(function(p){ p.exercises.forEach(function(e){ HINTS[e.id] = e.hints.length; }); });
+
+  function map(){ return Object.create(null); }
+  function blank(){ return {read:map(), crit:map(), hints:map(), help:map(), notes:map(), done:map()}; }
+  function isObj(o){ return o && typeof o === "object" && !Array.isArray(o); }
+  function clamp(n, max){ n = parseInt(n, 10); return isNaN(n) ? 0 : Math.max(0, Math.min(max, n)); }
+  // Build state only from known keys with coerced values; never trust stored/imported JSON shape.
+  function sanitize(o){
+    var s = blank();
+    if (!isObj(o)) return s;
+    ["read","done"].forEach(function(k){
+      if (isObj(o[k])) Object.keys(o[k]).forEach(function(x){ if (x !== "__proto__" && o[k][x] === true) s[k][x] = true; });
+    });
+    if (isObj(o.crit)) Object.keys(o.crit).forEach(function(x){
+      if (x !== "__proto__" && Array.isArray(o.crit[x])) s.crit[x] = o.crit[x].slice(0, 20).map(function(v){ return v === true; });
+    });
+    if (isObj(o.hints)) Object.keys(o.hints).forEach(function(x){ if (HINTS[x] !== undefined) s.hints[x] = clamp(o.hints[x], HINTS[x]); });
+    if (isObj(o.help)) Object.keys(o.help).forEach(function(x){ if (HINTS[x] !== undefined) s.help[x] = clamp(o.help[x], 2); });
+    if (isObj(o.notes)) Object.keys(o.notes).forEach(function(x){ if (HINTS[x] !== undefined && typeof o.notes[x] === "string") s.notes[x] = o.notes[x].slice(0, 20000); });
+    return s;
+  }
+  var S = load();
+  function load(){
+    try { var r = localStorage.getItem(KEY); if (r) return sanitize(JSON.parse(r)); } catch(e){}
+    return blank();
+  }
+  var warned = false;
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(S)); }
+    catch(e){ if (!warned){ warned = true; toast("Progress could not be saved in this browser. Use Export to keep a backup."); } }
+  }
+  try { var th = localStorage.getItem("ai-sdet-academy-theme"); if (th) document.documentElement.setAttribute("data-theme", th); } catch(e){}
+
+  // ---------- markdown subset ----------
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+  function inline(s){
+    var codes = [];
+    s = String(s).replace(/\{\{(.+?)\}\}(?!\})/g, function(_,c){ codes.push(c); return "\u0000"+(codes.length-1)+"\u0000"; });
+    s = esc(s);
+    s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\*)/g, "$1<em>$2</em>");
+    s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s.replace(/\u0000(\d+)\u0000/g, function(_,i){ return "<code>"+esc(codes[+i])+"</code>"; });
+  }
+  function md(src){
+    var lines = src.replace(/\r/g,"").split("\n"), out = [], i = 0, list = null, para = [];
+    function flushPara(){ if (para.length){ out.push("<p>"+inline(para.join(" "))+"</p>"); para = []; } }
+    function closeList(){ if (list){ out.push("</"+list+">"); list = null; } }
+    while (i < lines.length){
+      var l = lines[i];
+      var f = l.match(/^~~~(\w*)\s*$/);
+      if (f){
+        flushPara(); closeList();
+        var code = []; i++;
+        while (i < lines.length && !/^~~~\s*$/.test(lines[i])) { code.push(lines[i]); i++; }
+        i++;
+        out.push('<pre><button class="copy" data-a="copy" aria-label="Copy code">Copy</button><code>'+esc(code.join("\n")).replace(/§/g,"$")+"</code></pre>");
+        continue;
+      }
+      if (/^##\s/.test(l)){ flushPara(); closeList(); out.push("<h3>"+inline(l.replace(/^##\s/,""))+"</h3>"); }
+      else if (/^>\s?/.test(l)){ flushPara(); closeList(); out.push("<blockquote>"+inline(l.replace(/^>\s?/,""))+"</blockquote>"); }
+      else if (/^\d+\.\s/.test(l)){ flushPara(); if (list!=="ol"){ closeList(); out.push('<ol start="'+l.match(/^(\d+)\./)[1]+'">'); list="ol"; } out.push("<li>"+inline(l.replace(/^\d+\.\s/,""))+"</li>"); }
+      else if (/^-\s/.test(l)){ flushPara(); if (list!=="ul"){ closeList(); out.push("<ul>"); list="ul"; } out.push("<li>"+inline(l.replace(/^-\s/,""))+"</li>"); }
+      else if (/^\s*$/.test(l)){ flushPara(); closeList(); }
+      else { closeList(); para.push(l); }
+      i++;
+    }
+    flushPara(); closeList();
+    return '<div class="md">'+out.join("\n")+"</div>";
+  }
+
+  // ---------- progress ----------
+  function phaseStats(p){
+    var secs = p.learn.length, read = 0, ex = p.exercises.length, done = 0;
+    p.learn.forEach(function(_,i){ if (S.read[p.id+":"+i]) read++; });
+    p.exercises.forEach(function(e){ if (S.done[e.id]) done++; });
+    return {pct: Math.round((read+done)/(secs+ex)*100), read:read, secs:secs, done:done, ex:ex};
+  }
+  function overall(){
+    var t=0,d=0; P.forEach(function(p){ var s=phaseStats(p); t+=s.secs+s.ex; d+=s.read+s.done; });
+    return {pct: t? Math.round(d/t*100):0, d:d, t:t};
+  }
+
+  // ---------- render ----------
+  function el(id){ return document.getElementById(id); }
+  function renderSide(){
+    el("side").innerHTML = P.map(function(p){
+      var s = phaseStats(p);
+      return '<button class="ph" data-a="phase" data-id="'+p.id+'" aria-current="'+(view.phase===p.id)+'">'
+        + '<b>'+p.n+'. '+esc(p.title)+'</b><span>'+p.weeks+' &middot; '+s.pct+'%</span>'
+        + '<div class="bar"><i style="width:'+s.pct+'%"></i></div></button>';
+    }).join("");
+  }
+  function renderTop(){
+    var o = overall();
+    el("overallBar").style.width = o.pct+"%";
+    el("overallTxt").textContent = o.pct+"% complete ("+o.d+" of "+o.t+" items)";
+  }
+  function currentPhase(){ return P.filter(function(p){ return p.id===view.phase; })[0]; }
+
+  function renderMain(){
+    var p = currentPhase(), s = phaseStats(p);
+    var h = '<div class="phase-head"><h2>Phase '+p.n+': '+esc(p.title)+'</h2><p>'+p.weeks+'</p><p>'+esc(p.goal)+'</p>'
+      + '<div class="deliv"><strong>Deliverable:</strong> '+esc(p.deliverable)+'</div></div>';
+    var tabs = [["learn","Learn ("+s.read+"/"+s.secs+")"],["exercises","Exercises ("+s.done+"/"+s.ex+")"],["resources","Resources"]];
+    h += '<div class="tabs">'+tabs.map(function(t){
+      return '<button data-a="tab" data-id="'+t[0]+'"'+(view.tab===t[0]?' aria-current="page"':'')+'>'+t[1]+'</button>';
+    }).join("")+"</div>";
+    if (view.tab==="learn") h += learnHtml(p);
+    else if (view.tab==="exercises") h += exercisesHtml(p);
+    else h += resourcesHtml(p);
+    el("main").innerHTML = h;
+  }
+
+  function learnHtml(p){
+    var h = "";
+    if (p.setup) h += '<details class="card"><summary>Setup for the exercises (do this first)</summary><div class="body">'+md(p.setup)+"</div></details>";
+    p.learn.forEach(function(sec,i){
+      var k = p.id+":"+i, r = !!S.read[k];
+      h += '<details class="card"'+(i===0?" open":"")+'><summary><span class="grow">'+(i+1)+'. '+esc(sec.t)+'</span>'
+        + '<span class="chip'+(r?" done":"")+'">'+(r?"Read":"Unread")+'</span></summary><div class="body">'+md(sec.md)
+        + '<p><button class="btn '+(r?"":"primary")+'" data-a="read" data-k="'+k+'">'+(r?"Mark as unread":"Mark as read")+'</button></p></div></details>';
+    });
+    return h;
+  }
+
+  function exercisesHtml(p){
+    return p.exercises.map(function(e,i){
+      var done = !!S.done[e.id], crit = S.crit[e.id] || [], hn = Math.min(S.hints[e.id] || 0, e.hints.length), help = S.help[e.id] || 0;
+      var h = '<details class="card" data-ex="'+e.id+'"><summary><span class="grow">Exercise '+(i+1)+': '+esc(e.title)+'</span>'
+        + '<span class="chip">'+e.time+'</span><span class="chip'+(done?" done":"")+'">'+(done?"Done":"To do")+'</span></summary><div class="body">';
+      h += '<p><strong>Goal:</strong> '+inline(e.goal)+'</p>';
+      h += '<div class="sect"><h4>Task</h4>'+md(e.task)+'</div>';
+      h += '<div class="sect crit"><h4>Done when</h4>'+e.criteria.map(function(c,j){
+        return '<label><input type="checkbox" data-a="crit" data-e="'+e.id+'" data-j="'+j+'"'+(crit[j]?" checked":"")+'><span>'+inline(c)+"</span></label>";
+      }).join("")+"</div>";
+      h += '<div class="sect"><h4>Need help?</h4>';
+      for (var j=0;j<hn;j++) h += '<div class="hint"><small>Hint '+(j+1)+' of '+e.hints.length+'</small><br>'+inline(e.hints[j])+"</div>";
+      if (help>=1) h += '<div class="hint"><small>Approach</small><br>'+inline(e.approach)+"</div>";
+      if (help>=2) h += '<div class="sect"><h4>Reference solution</h4>'+md(e.solution)+"</div>";
+      h += '<div class="stuck">';
+      if (hn < e.hints.length) h += '<button class="btn warn" data-a="hint" data-e="'+e.id+'">Show hint '+(hn+1)+' of '+e.hints.length+'</button>';
+      else if (help<1) h += '<button class="btn warn" data-a="help" data-e="'+e.id+'">Show approach</button>';
+      else if (help<2) h += '<button class="btn warn" data-a="help" data-e="'+e.id+'">Show full solution</button>';
+      h += '<span class="note">Try for 20 minutes before using hints. Reading a solution is fine, but retype it yourself, then change something to prove you understand it.</span></div></div>';
+      h += '<div class="sect"><h4>My notes</h4><textarea data-a="note" data-e="'+e.id+'" aria-label="Notes for exercise '+(i+1)+'" placeholder="What worked, what broke, what you learned...">'+esc(S.notes[e.id]||"")+"</textarea></div>";
+      h += '<p><button class="btn '+(done?"":"primary")+'" data-a="done" data-e="'+e.id+'">'+(done?"Mark as not done":"Mark exercise done")+"</button></p>";
+      h += "</div></details>";
+      return h;
+    }).join("");
+  }
+
+  function resourcesHtml(p){
+    return '<ul class="res">'+p.resources.map(function(r){
+      return '<li><a href="'+r[1]+'" target="_blank" rel="noopener">'+esc(r[0])+"</a></li>";
+    }).join("")+"</ul><p style=\"color:var(--muted)\">Links and library versions change. If a command differs from what you see in the docs, trust the docs.</p>";
+  }
+
+  // keep open cards open across re-render
+  function withOpenState(fn){
+    var open = Array.prototype.map.call(document.querySelectorAll("#main details[open]"), function(d,i){
+      return d.getAttribute("data-ex") || ("i"+Array.prototype.indexOf.call(document.querySelectorAll("#main details"), d));
+    });
+    var y = window.scrollY;
+    fn();
+    var all = document.querySelectorAll("#main details");
+    Array.prototype.forEach.call(all, function(d,i){
+      var key = d.getAttribute("data-ex") || ("i"+i);
+      d.open = open.indexOf(key) !== -1;
+    });
+    window.scrollTo(0,y);
+  }
+  function focusKey(){
+    var a = document.activeElement;
+    if (!a || !a.getAttribute || !a.getAttribute("data-a")) return null;
+    return ["data-a","data-k","data-e","data-id","data-j"].map(function(n){ return a.getAttribute(n); });
+  }
+  function restoreFocus(k){
+    if (!k) return;
+    var names = ["data-a","data-k","data-e","data-id","data-j"];
+    var c = document.querySelectorAll('[data-a="'+k[0]+'"]');
+    for (var i=0;i<c.length;i++){
+      if (names.every(function(n,j){ return c[i].getAttribute(n) === k[j]; })){ c[i].focus(); return; }
+    }
+    // hint button turns into a "show approach/solution" button: keep focus on the same exercise's help control
+    if (k[2]){
+      var h = document.querySelector('[data-e="'+k[2]+'"][data-a="hint"], [data-e="'+k[2]+'"][data-a="help"]');
+      if (h) h.focus();
+    }
+  }
+  function refresh(){ var f = focusKey(); withOpenState(function(){ renderMain(); }); renderSide(); renderTop(); restoreFocus(f); }
+
+  function toast(t){ var e=el("toast"); e.textContent=t; e.classList.add("on"); setTimeout(function(){ e.classList.remove("on"); },1800); }
+
+  // ---------- events ----------
+  document.addEventListener("click", function(ev){
+    var b = ev.target.closest("[data-a]"); if (!b) return;
+    var a = b.getAttribute("data-a"), id = b.getAttribute("data-id"), e = b.getAttribute("data-e");
+    if (a==="phase"){ view.phase=id; view.tab="learn"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
+    else if (a==="tab"){ view.tab=id; setHash(); var f=focusKey(); renderAll(); restoreFocus(f); }
+    else if (a==="read"){ var k=b.getAttribute("data-k"); S.read[k]=!S.read[k]; save(); refresh(); }
+    else if (a==="done"){ S.done[e]=!S.done[e]; save(); refresh(); }
+    else if (a==="hint"){ S.hints[e]=(S.hints[e]||0)+1; save(); refresh(); }
+    else if (a==="help"){
+      var next=(S.help[e]||0)+1;
+      if (next===2 && !confirm("Show the full solution? Try the approach first. You learn more by building it yourself.")) return;
+      S.help[e]=next; save(); refresh();
+    }
+    else if (a==="copy"){
+      var t = b.parentNode.querySelector("code").textContent;
+      try { navigator.clipboard.writeText(t).then(function(){ toast("Copied"); }); } catch(x){ toast("Copy not available"); }
+    }
+    else if (a==="theme"){
+      var cur = document.documentElement.getAttribute("data-theme");
+      var dark = cur ? cur==="dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var nt = dark ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", nt);
+      try { localStorage.setItem("ai-sdet-academy-theme", nt); } catch(x){}
+    }
+    else if (a==="export"){
+      var blob = new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+      var u = URL.createObjectURL(blob), l = document.createElement("a");
+      l.href=u; l.download="ai-sdet-academy-progress.json"; l.click(); setTimeout(function(){ URL.revokeObjectURL(u); }, 1000);
+    }
+    else if (a==="import"){ el("file").click(); }
+    else if (a==="reset"){ if (confirm("Delete all progress and notes on this browser?")){ S=blank(); save(); renderAll(); } }
+  });
+  document.addEventListener("change", function(ev){
+    var t = ev.target;
+    if (t.getAttribute("data-a")==="crit"){
+      var e=t.getAttribute("data-e"), j=+t.getAttribute("data-j");
+      S.crit[e]=S.crit[e]||[]; S.crit[e][j]=t.checked; save();
+    }
+    if (t.id==="file" && t.files[0]){
+      var r = new FileReader();
+      r.onload = function(){
+        var data;
+        try { data = JSON.parse(r.result); } catch(x){ toast("Invalid file"); t.value=""; return; }
+        if (!isObj(data)){ toast("Invalid file"); t.value=""; return; }
+        if (confirm("Replace your current progress with the imported file?")){ S=sanitize(data); save(); renderAll(); toast("Progress imported"); }
+        t.value = "";
+      };
+      r.readAsText(t.files[0]);
+    }
+  });
+  document.addEventListener("input", function(ev){
+    var t = ev.target;
+    if (t.getAttribute("data-a")==="note"){ S.notes[t.getAttribute("data-e")]=t.value; save(); }
+  });
+
+  function renderAll(){ renderSide(); renderTop(); renderMain(); }
+  function setHash(){
+    var h = "#"+view.phase+"/"+view.tab;
+    if (location.hash !== h) { try { history.pushState(null, "", h); } catch(e){} }
+  }
+  function fromHash(){
+    var h = location.hash.replace("#","").split("/");
+    view.phase = P.some(function(p){ return p.id===h[0]; }) ? h[0] : P[0].id;
+    view.tab = ["learn","exercises","resources"].indexOf(h[1])!==-1 ? h[1] : "learn";
+  }
+  window.addEventListener("hashchange", function(){ fromHash(); renderAll(); });
+  fromHash(); renderAll();
+})();
+</script>
+</body>
+</html>
