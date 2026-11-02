@@ -22,6 +22,9 @@
   --accent:#6fc79a; --accent-ink:#0e1a14; --accent-soft:#1d2f26; --warn:#e5b64a; --warn-soft:#2e2713;
   --code-bg:#262a31; --pre-bg:#0d0f12; --pre-ink:#e8eaed;
 }
+:root{color-scheme:light dark}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -81,6 +84,28 @@ pre code{background:none;padding:0;color:inherit;font-size:13px;white-space:pre}
 .stuck .note{font-size:13px;color:var(--muted)}
 textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:14px/1.5 inherit;resize:vertical}
 .res li{margin:6px 0}
+.themebox{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.themebox select{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 8px;border-radius:8px;font:inherit;font-size:14px}
+.chipbtn{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.chipbtn.met{background:var(--accent-soft);border-color:var(--accent)}
+.hero{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin:8px 0 4px}
+.hero .big{font-size:56px;font-weight:800;line-height:1;color:var(--accent)}
+.hero small{display:block;color:var(--muted)}
+.today{margin:16px 0}
+.today .bar{height:12px}
+.timer{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.timer .clock{font:700 28px/1 ui-monospace,Consolas,Menlo,monospace;min-width:110px}
+.days{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin:8px 0}
+.day{border-radius:6px;background:var(--line);height:44px;position:relative;overflow:hidden;border:2px solid transparent}
+.day i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);opacity:.55}
+.day.met i{opacity:1}
+.day.today-cell{border-color:var(--ink)}
+.daylbl{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center}
+.cups{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
+.cup{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.cup.locked{opacity:.75}
+.cup b{display:block;font-size:14px;margin-top:4px}
+.cup span{font-size:12px;color:var(--muted)}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.on{opacity:1}
 @media (max-width:820px){
@@ -96,8 +121,13 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
 <header class="top">
   <h1>AI SDET Academy</h1>
   <div class="overall"><div class="bar"><i id="overallBar"></i></div><small id="overallTxt"></small></div>
+  <button class="btn chipbtn" id="streakChip" data-a="view-streak" title="Daily streak and rewards"></button>
   <div class="tools">
-    <button class="btn" data-a="theme" title="Switch light or dark">Theme</button>
+    <label class="themebox">Theme
+      <select id="themeSel" aria-label="Theme">
+        <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+      </select>
+    </label>
     <button class="btn" data-a="export">Export progress</button>
     <button class="btn" data-a="import">Import</button>
     <button class="btn" data-a="reset">Reset</button>
@@ -121,7 +151,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   P.forEach(function(p){ p.exercises.forEach(function(e){ HINTS[e.id] = e.hints.length; }); });
 
   function map(){ return Object.create(null); }
-  function blank(){ return {read:map(), crit:map(), hints:map(), help:map(), notes:map(), done:map()}; }
+  function blank(){ return {read:map(), crit:map(), hints:map(), help:map(), notes:map(), done:map(), log:map(), cups:map(), timer:{start:null, acc:0}}; }
   function isObj(o){ return o && typeof o === "object" && !Array.isArray(o); }
   function clamp(n, max){ n = parseInt(n, 10); return isNaN(n) ? 0 : Math.max(0, Math.min(max, n)); }
   // Build state only from known keys with coerced values; never trust stored/imported JSON shape.
@@ -137,9 +167,21 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     if (isObj(o.hints)) Object.keys(o.hints).forEach(function(x){ if (HINTS[x] !== undefined) s.hints[x] = clamp(o.hints[x], HINTS[x]); });
     if (isObj(o.help)) Object.keys(o.help).forEach(function(x){ if (HINTS[x] !== undefined) s.help[x] = clamp(o.help[x], 2); });
     if (isObj(o.notes)) Object.keys(o.notes).forEach(function(x){ if (HINTS[x] !== undefined && typeof o.notes[x] === "string") s.notes[x] = o.notes[x].slice(0, 20000); });
+    if (isObj(o.log)) Object.keys(o.log).forEach(function(x){
+      var v = Number(o.log[x]);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(x) && isFinite(v) && v > 0) s.log[x] = Math.min(1440, Math.round(v*10)/10);
+    });
+    if (isObj(o.cups)) Object.keys(o.cups).forEach(function(x){
+      if (CUPS.some(function(c){ return c.id === x; }) && /^\d{4}-\d{2}-\d{2}$/.test(String(o.cups[x]))) s.cups[x] = String(o.cups[x]);
+    });
+    if (isObj(o.timer)){
+      var st = Number(o.timer.start), ac = Number(o.timer.acc);
+      s.timer.acc = isFinite(ac) && ac > 0 ? Math.min(86400, ac) : 0;
+      s.timer.start = isFinite(st) && st > 0 && st <= Date.now() ? st : null;
+    }
     return s;
   }
-  var S = load();
+  var S = blank();   // real state is loaded below, after CUPS is defined (sanitize needs it)
   function load(){
     try { var r = localStorage.getItem(KEY); if (r) return sanitize(JSON.parse(r)); } catch(e){}
     return blank();
@@ -149,7 +191,113 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     try { localStorage.setItem(KEY, JSON.stringify(S)); }
     catch(e){ if (!warned){ warned = true; toast("Progress could not be saved in this browser. Use Export to keep a backup."); } }
   }
-  try { var th = localStorage.getItem("ai-sdet-academy-theme"); if (th) document.documentElement.setAttribute("data-theme", th); } catch(e){}
+  // ---------- theme: system / light / dark ----------
+  var THEME_KEY = "ai-sdet-academy-theme", mq = window.matchMedia("(prefers-color-scheme: dark)");
+  function getTheme(){ try { var t = localStorage.getItem(THEME_KEY); if (t === "light" || t === "dark") return t; } catch(e){} return "system"; }
+  function applyTheme(t){
+    if (t === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+    var sel = document.getElementById("themeSel");
+    if (sel){
+      sel.value = t;
+      sel.options[0].textContent = t === "system" ? "System (" + (mq.matches ? "dark" : "light") + ")" : "System";
+    }
+  }
+  function setTheme(t){ try { localStorage.setItem(THEME_KEY, t); } catch(e){} applyTheme(t); }
+  var onMq = function(){ if (getTheme() === "system") applyTheme("system"); };
+  if (mq.addEventListener) mq.addEventListener("change", onMq); else if (mq.addListener) mq.addListener(onMq);
+  applyTheme(getTheme());
+
+  // ---------- daily streak (goal: 60 min a day) ----------
+  var GOAL = 60;
+  // Fictional rewards. Earned once the best streak reaches the day count, kept for good.
+  var CUPS = [
+    {id:"bronze",   days:3,   name:"Bronze Sprint Cup",           color:"#b0703a"},
+    {id:"silver",   days:7,   name:"Silver Week Cup",             color:"#9aa3ad"},
+    {id:"gold",     days:14,  name:"Golden Fortnight Chalice",    color:"#e0a800"},
+    {id:"platinum", days:30,  name:"Platinum Month Trophy",       color:"#4fb0c9"},
+    {id:"diamond",  days:60,  name:"Diamond Grandmaster Goblet",  color:"#6c8cff"},
+    {id:"legend",   days:100, name:"Legendary Eval-Hunter Cup",   color:"#c05cd6"}
+  ];
+  S = load();
+  function pad(n){ return (n < 10 ? "0" : "") + n; }
+  function ds(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
+  function dayNum(k){ var p = k.split("-"); return Math.round(Date.UTC(+p[0], +p[1]-1, +p[2]) / 86400000); }
+  function met(k){ return (S.log[k] || 0) >= GOAL; }
+  function elapsedSec(){ return S.timer.acc + (S.timer.start ? Math.max(0, (Date.now() - S.timer.start) / 1000) : 0); }
+  function todayMin(){ return (S.log[ds(new Date())] || 0) + elapsedSec() / 60; }
+  function streakInfo(){
+    var c = new Date(), cur = 0;
+    if (!met(ds(c))) c.setDate(c.getDate() - 1);        // today not done yet: streak is still alive through yesterday
+    while (met(ds(c))){ cur++; c.setDate(c.getDate() - 1); }
+    var keys = Object.keys(S.log).filter(met).map(dayNum).sort(function(a,b){ return a-b; }), best = 0, run = 0, prev = null;
+    keys.forEach(function(n){ run = (prev !== null && n === prev + 1) ? run + 1 : 1; prev = n; if (run > best) best = run; });
+    return {cur: cur, best: Math.max(best, cur)};
+  }
+  function awardCups(){
+    var best = streakInfo().best, won = [];
+    CUPS.forEach(function(c){ if (best >= c.days && !S.cups[c.id]){ S.cups[c.id] = ds(new Date()); won.push(c.name); } });
+    if (won.length) toast("Reward unlocked: " + won.join(", "));
+    return won.length;
+  }
+  function commitTimer(){            // shortcut: a session that runs past midnight is credited to the day it is saved
+    var e = elapsedSec();
+    if (e > 0){ var k = ds(new Date()); S.log[k] = Math.min(1440, Math.round(((S.log[k] || 0) + e / 60) * 10) / 10); }
+    S.timer = {start: null, acc: 0};
+  }
+  function addMinutes(n){ var k = ds(new Date()); S.log[k] = Math.min(1440, Math.round(((S.log[k] || 0) + n) * 10) / 10); }
+  function fmtClock(sec){ sec = Math.floor(sec); return pad(Math.floor(sec/3600)) + ":" + pad(Math.floor(sec%3600/60)) + ":" + pad(sec%60); }
+  function cupSvg(color){
+    return '<svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true"><path d="M16 8h32v14c0 10-7 18-16 18S16 32 16 22z" fill="'+color+'"/>'
+      + '<path d="M16 12H6c0 10 4 16 12 18M48 12h10c0 10-4 16-12 18" fill="none" stroke="'+color+'" stroke-width="4"/>'
+      + '<rect x="29" y="40" width="6" height="10" fill="'+color+'"/><rect x="20" y="50" width="24" height="6" rx="2" fill="'+color+'"/></svg>';
+  }
+  function streakHtml(){
+    var si = streakInfo(), mins = todayMin(), pct = Math.min(100, Math.round(mins / GOAL * 100)), running = !!S.timer.start;
+    var h = '<div class="phase-head"><h2>Daily streak</h2><p>Goal: '+GOAL+' minutes of study a day. Hit it to extend your streak and unlock fictional cups.</p></div>';
+    h += '<div class="hero"><div><span class="big" id="sCur">'+si.cur+'</span><small>day streak</small></div>'
+      + '<div><b id="sBest">'+si.best+'</b><small>best streak</small></div>'
+      + '<div><b>'+Object.keys(S.cups).length+' / '+CUPS.length+'</b><small>cups earned</small></div></div>';
+    h += '<div class="today card" style="padding:14px 16px"><strong>Today: <span id="tToday">'+Math.floor(mins)+'</span> / '+GOAL+' min</strong>'
+      + '<div class="bar" style="margin:8px 0"><i id="tBar" style="width:'+pct+'%"></i></div>'
+      + '<div class="timer"><span class="clock" id="tClock" role="timer" aria-label="Session timer">'+fmtClock(elapsedSec())+'</span>'
+      + (running ? '<button class="btn" data-a="t-pause">Pause</button>' : '<button class="btn primary" data-a="t-start">'+(S.timer.acc>0?'Resume':'Start studying')+'</button>')
+      + '<button class="btn" data-a="t-save"'+(elapsedSec()<1?' disabled':'')+'>Save session</button></div>'
+      + '<div class="timer"><span>Studied offline? Add:</span>'
+      + [10,15,30,60].map(function(n){ return '<button class="btn" data-a="add-min" data-n="'+n+'">+'+n+' min</button>'; }).join("")
+      + '<button class="btn" data-a="reset-today">Reset today</button></div>'
+      + '<small style="color:var(--muted)">Be honest with yourself. The only person this reward fools is you.</small></div>';
+    var labels = "", cells = "", today = new Date();
+    for (var i = 13; i >= 0; i--){
+      var d = new Date(today); d.setDate(today.getDate() - i);
+      var k = ds(d), m = S.log[k] || 0, fill = Math.min(100, Math.round(m / GOAL * 100));
+      cells += '<div class="day'+(m>=GOAL?' met':'')+(i===0?' today-cell':'')+'" title="'+k+': '+Math.floor(m)+' min" aria-label="'+k+': '+Math.floor(m)+' minutes'+(m>=GOAL?', goal met':'')+'"><i style="height:'+fill+'%"></i></div>';
+      labels += '<span>'+"SMTWTFS".charAt(d.getDay())+'</span>';
+    }
+    h += '<h3 style="margin:18px 0 4px">Last 14 days</h3><div class="days">'+cells+'</div><div class="daylbl" aria-hidden="true">'+labels+'</div>';
+    h += '<h3 style="margin:22px 0 4px">Rewards</h3><div class="cups">' + CUPS.map(function(c){
+      var got = S.cups[c.id];
+      return '<div class="cup'+(got?'':' locked')+'">'+(got ? cupSvg(c.color) : cupSvg("#8a9099"))
+        + '<b>'+c.name+'</b><span>'+(got ? 'Earned '+got : (Math.max(0, c.days - si.best) + ' more day' + (c.days - si.best === 1 ? '' : 's')+' (' + c.days + '-day streak)'))+'</span></div>';
+    }).join("") + '</div><p style="color:var(--muted);font-size:14px">Cups are fictional and just for fun. Once earned they are kept, even if a streak later breaks.</p>';
+    return h;
+  }
+  function updateChip(){
+    var chip = document.getElementById("streakChip"); if (!chip) return;
+    var si = streakInfo(), m = Math.floor(todayMin());
+    chip.textContent = "Streak " + si.cur + (S.timer.start ? " · " + fmtClock(elapsedSec()) : " · " + m + "/" + GOAL + " min");
+    chip.classList.toggle("met", m >= GOAL);
+    chip.setAttribute("aria-label", "Daily streak: " + si.cur + " days. Today " + m + " of " + GOAL + " minutes.");
+  }
+  function updateLive(){
+    updateChip();
+    if (view.phase !== "streak") return;
+    var m = todayMin(), a = document.getElementById("tToday"), b = document.getElementById("tBar"), c = document.getElementById("tClock");
+    if (a) a.textContent = Math.floor(m);
+    if (b) b.style.width = Math.min(100, Math.round(m / GOAL * 100)) + "%";
+    if (c) c.textContent = fmtClock(elapsedSec());
+  }
+  setInterval(updateLive, 1000);
 
   // ---------- markdown subset ----------
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
@@ -204,7 +352,10 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   // ---------- render ----------
   function el(id){ return document.getElementById(id); }
   function renderSide(){
-    el("side").innerHTML = P.map(function(p){
+    var si = streakInfo();
+    el("side").innerHTML = '<button class="ph" data-a="view-streak" aria-current="'+(view.phase==="streak")+'">'
+      + '<b>Daily streak</b><span>'+si.cur+' day'+(si.cur===1?'':'s')+' &middot; goal '+GOAL+' min a day</span></button>'
+      + P.map(function(p){
       var s = phaseStats(p);
       return '<button class="ph" data-a="phase" data-id="'+p.id+'" aria-current="'+(view.phase===p.id)+'">'
         + '<b>'+p.n+'. '+esc(p.title)+'</b><span>'+p.weeks+' &middot; '+s.pct+'%</span>'
@@ -219,6 +370,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   function currentPhase(){ return P.filter(function(p){ return p.id===view.phase; })[0]; }
 
   function renderMain(){
+    if (view.phase === "streak"){ el("main").innerHTML = streakHtml(); return; }
     var p = currentPhase(), s = phaseStats(p);
     var h = '<div class="phase-head"><h2>Phase '+p.n+': '+esc(p.title)+'</h2><p>'+p.weeks+'</p><p>'+esc(p.goal)+'</p>'
       + '<div class="deliv"><strong>Deliverable:</strong> '+esc(p.deliverable)+'</div></div>';
@@ -308,7 +460,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
       if (h) h.focus();
     }
   }
-  function refresh(){ var f = focusKey(); withOpenState(function(){ renderMain(); }); renderSide(); renderTop(); restoreFocus(f); }
+  function refresh(){ var f = focusKey(); withOpenState(function(){ renderMain(); }); renderSide(); renderTop(); updateChip(); restoreFocus(f); }
 
   function toast(t){ var e=el("toast"); e.textContent=t; e.classList.add("on"); setTimeout(function(){ e.classList.remove("on"); },1800); }
 
@@ -330,13 +482,12 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
       var t = b.parentNode.querySelector("code").textContent;
       try { navigator.clipboard.writeText(t).then(function(){ toast("Copied"); }); } catch(x){ toast("Copy not available"); }
     }
-    else if (a==="theme"){
-      var cur = document.documentElement.getAttribute("data-theme");
-      var dark = cur ? cur==="dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
-      var nt = dark ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", nt);
-      try { localStorage.setItem("ai-sdet-academy-theme", nt); } catch(x){}
-    }
+    else if (a==="view-streak"){ view.phase="streak"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
+    else if (a==="t-start"){ S.timer.start=Date.now(); save(); refresh(); }
+    else if (a==="t-pause"){ S.timer.acc=elapsedSec(); S.timer.start=null; save(); refresh(); }
+    else if (a==="t-save"){ commitTimer(); awardCups(); save(); refresh(); toast("Session saved"); }
+    else if (a==="add-min"){ addMinutes(+b.getAttribute("data-n")); awardCups(); save(); refresh(); }
+    else if (a==="reset-today"){ if (confirm("Reset today's minutes to zero?")){ delete S.log[ds(new Date())]; S.timer={start:null,acc:0}; save(); refresh(); } }
     else if (a==="export"){
       var blob = new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
       var u = URL.createObjectURL(blob), l = document.createElement("a");
@@ -347,6 +498,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   });
   document.addEventListener("change", function(ev){
     var t = ev.target;
+    if (t.id==="themeSel"){ setTheme(t.value); return; }
     if (t.getAttribute("data-a")==="crit"){
       var e=t.getAttribute("data-e"), j=+t.getAttribute("data-j");
       S.crit[e]=S.crit[e]||[]; S.crit[e][j]=t.checked; save();
@@ -368,14 +520,14 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     if (t.getAttribute("data-a")==="note"){ S.notes[t.getAttribute("data-e")]=t.value; save(); }
   });
 
-  function renderAll(){ renderSide(); renderTop(); renderMain(); }
+  function renderAll(){ renderSide(); renderTop(); renderMain(); updateChip(); }
   function setHash(){
-    var h = "#"+view.phase+"/"+view.tab;
+    var h = view.phase === "streak" ? "#streak" : "#"+view.phase+"/"+view.tab;
     if (location.hash !== h) { try { history.pushState(null, "", h); } catch(e){} }
   }
   function fromHash(){
     var h = location.hash.replace("#","").split("/");
-    view.phase = P.some(function(p){ return p.id===h[0]; }) ? h[0] : P[0].id;
+    view.phase = h[0]==="streak" || P.some(function(p){ return p.id===h[0]; }) ? h[0] : P[0].id;
     view.tab = ["learn","exercises","resources"].indexOf(h[1])!==-1 ? h[1] : "learn";
   }
   window.addEventListener("hashchange", function(){ fromHash(); renderAll(); });
