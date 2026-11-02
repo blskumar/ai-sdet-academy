@@ -7,9 +7,10 @@ window.PHASES.push({
   goal: "Understand what an LLM actually does, then learn to measure how much its output varies.",
   deliverable: "Write-up 'Why the same prompt gives different tests' + a versioned prompt library.",
   setup: R`## Before you start
-- **Prerequisites:** Python 3.11+, Node 18+ (Phase 3), Git, a GitHub account (Phases 4 and 7), a terminal. Commands are shown for Windows PowerShell; on macOS/Linux use the equivalent activate and env-var syntax.
+- **Prerequisites:** Python 3.11+, Node 18+ (Phases 3 and 6: Playwright, promptfoo), Git, a GitHub account (Phase 4), and an MCP host such as Claude Code for Phase 3, a terminal. Commands are shown for Windows PowerShell; on macOS/Linux use the equivalent activate and env-var syntax.
 - **Pace:** the plan assumes 8-10 hours a week. The time on each exercise is a guess; double it the first time.
-- **API call budget:** variance and eval exercises make many calls (about 100 in Phase 1 exercises 2 and 3, up to 150 in Phase 6 exercise 1, 150+ in Phase 7). Free models have daily limits. Start with 2-3 runs per item, scale up once the code works, and cache results to disk.
+- **API call budget:** variance and eval exercises make many calls (about 100 in Phase 1 exercises 2 and 3, up to 150 in Phase 6 exercise 1, 250+ in Phase 7). Free models have daily limits. Start with 2-3 runs per item, scale up once the code works, and cache results to disk.
+- **Coming from Java?** Python decorators behave like annotations that wrap a function, Pydantic models are POJOs with validation, and pytest fixtures replace JUnit setup methods. If you are new to Python, work through chapters 1-9 of the official tutorial (docs.python.org/3/tutorial) first.
 - **Folder layout:** one project folder for everything. Later exercises import earlier files, so use these names:
 
 ~~~text
@@ -20,7 +21,12 @@ judge.py        DeepEval judge wrapper             (phase 4)
 checks.py       deterministic checks on cases      (phase 4)
 golden.jsonl    golden dataset                     (phase 4)
 rag.py          retriever + answer()               (phase 5)
+agent.py        make_agent + fake model helpers    (phase 5)
+attacks.json    injection payloads                 (phase 6)
+tracer.py       @traced decorator                  (phase 7)
+report.py       metrics report from traces         (phase 7)
 traces.jsonl    written by the tracer              (phase 7)
+cache.py        optional: cache LLM calls          (below)
 ~~~
 
 ## One-time setup (used by every phase)
@@ -50,7 +56,7 @@ def get_client():
     if _client is None:
         _client = OpenAI(base_url=os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1"),
                          api_key=os.environ["LLM_API_KEY"],
-                         timeout=30, max_retries=0)   # we add our own retries in Phase 2
+                         timeout=30, max_retries=2)   # SDK retries 429/5xx twice; Phase 2 adds your own retry logic on top
     return _client
 
 def ask(prompt, system=None, temperature=0.7, **kw):
@@ -59,6 +65,22 @@ def ask(prompt, system=None, temperature=0.7, **kw):
     r = get_client().chat.completions.create(model=MODEL, messages=msgs,
                                              temperature=temperature, **kw)
     return r.choices[0].message.content
+~~~
+
+Optional {{cache.py}}: wrap {{ask}} so reruns cost nothing. Pass a different {{tag}} for each repeat run, otherwise you get the same cached text back:
+
+~~~python
+import hashlib, json, pathlib
+
+def cached_ask(ask, path="cache.json"):
+    p = pathlib.Path(path); db = json.loads(p.read_text()) if p.exists() else {}
+    def run(prompt, system=None, temperature=0.7, tag=0, **kw):
+        k = hashlib.sha256(json.dumps([prompt, system, temperature, tag]).encode()).hexdigest()
+        if k not in db:
+            db[k] = ask(prompt, system=system, temperature=temperature, **kw)
+            p.write_text(json.dumps(db))
+        return db[k]
+    return run
 ~~~
 
 Never commit your key. Add {{.env}} and {{.venv}} to {{.gitignore}}.`,
@@ -114,7 +136,7 @@ New habits:
     {
       id: "p1e1", title: "Hello, LLM: set up and call the model", time: "45 min",
       goal: "Get a working {{ask()}} helper and see raw response metadata.",
-      task: R`1. Complete the setup section above and create {{llm.py}}.
+      task: R`1. Complete the "Setup for the exercises" card on this Learn tab and create {{llm.py}}.
 2. Write {{hello.py}} that sends a user story and asks for 3 test case titles.
 3. Print the answer, the model name used, and token usage ({{response.usage}}). You will need to look at the raw response, not only the text.
 4. Run it 3 times at temperature 0 and 3 times at temperature 1. Eyeball the difference.`,
@@ -141,7 +163,7 @@ for temp in (0, 0, 0, 1, 1, 1):
     {
       id: "p1e2", title: "Measure variance", time: "1.5 h",
       goal: "Turn 'it feels random' into a number.",
-      task: R`1. Write 10 different prompts that generate test cases (different stories: login, cart, search, payment, API, etc.).
+      task: R`1. Write 10 different prompts that generate test cases (different stories: login, cart, search, payment, API, etc.). Store them in {{prompts.json}} as a list of objects, each with an id field and a text field. Store them in {{prompts.json}} as a list of objects, each with an id field and a text field.
 2. For each prompt run 5 times at temperature 0 and 5 times at 0.9.
 3. Compute a similarity score between runs (suggest: Jaccard similarity on the set of words, averaged over all pairs of runs).
 4. Output a table: prompt id, mean similarity at temp 0, mean similarity at temp 0.9.
@@ -307,7 +329,7 @@ Design for testability: pass the LLM function in as a parameter ({{generate(stor
 3. Implement the repair loop: on invalid output, send the error back, max 2 retries.
 4. Add a {{--out file.json}} option and exit code 1 if still invalid.
 5. Add a timeout and basic retry on API errors (not on validation errors).`,
-      criteria: ["Valid output on 3 different stories", "Repair loop proven by forcing a bad first reply (a small stub function that returns bad JSON first is enough; full tests come in p2e3)", "Non-zero exit code on final failure, raw output saved", "Timeout set on API call"],
+      criteria: ["Valid output on 3 different stories", "Repair loop proven by forcing a bad first reply (a small stub function that returns bad JSON first is enough; full tests come in Phase 2 exercise 3)", "Non-zero exit code on final failure, raw output saved", "Timeout set on API call"],
       hints: [
         "{{argparse}} gives you the CLI quickly. Keep the generate() function separate from main() so you can test generate() later.",
         "In the repair prompt include both the previous raw output and the exact Pydantic error text ({{str(e)}}). The model fixes errors much better when it sees them.",
@@ -337,7 +359,7 @@ def call_with_retry(llm, *a, tries=3, **kw):
     for n in range(tries):
         try:
             return llm(*a, **kw)
-        except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError):
+        except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, openai.InternalServerError):
             if n == tries - 1: raise
             time.sleep(2 ** n + random.random())
 
@@ -347,8 +369,9 @@ def generate(story: str, llm: Callable = ask, retries: int = 2) -> Suite:
         raw = call_with_retry(llm, prompt, system=SYSTEM, temperature=0)
         try:
             m = re.search(r"\{.*\}", raw, re.S)
+            if not m: raise ValueError("no JSON object found in the reply")
             return Suite.model_validate_json(m.group(0))
-        except (AttributeError, ValidationError, ValueError) as e:
+        except (ValidationError, ValueError) as e:
             prompt = f"Story: {story}\n\nYour previous output:\n{raw}\n\nIt was invalid: {e}\nReturn corrected JSON only."
     open("last_invalid.txt", "w").write(raw)
     raise RuntimeError("invalid output after retries")
@@ -440,7 +463,7 @@ def test_max_steps_guard():
 4. Configure pytest so live tests are skipped unless {{--live}} is passed.`,
       criteria: ["5+ offline tests pass with network disabled", "Live test skipped by default", "FakeLLM records prompts and a test asserts on them", "Run time of offline tests under 2 seconds"],
       hints: [
-        "FakeLLM only needs {{__call__(self, prompt, system=None, temperature=0)}} so it can replace {{ask}}. That is why p2e1 took the LLM as a parameter.",
+        "FakeLLM only needs {{__call__(self, prompt, system=None, temperature=0)}} so it can replace {{ask}}. That is why Phase 2 exercise 1 took the LLM as a parameter.",
         "Register the marker and the option in {{conftest.py}} with {{pytest_addoption}} and {{pytest_collection_modifyitems}}.",
         "Assert on behaviour: {{len(fake.prompts) == 2}} proves exactly one repair happened."
       ],
@@ -654,7 +677,7 @@ test('login works', async ({ page }) => {
 1. List every problem you can find (aim for 6+).
 2. Rewrite the test properly, plus one negative test (locked_out_user).
 3. Prove the new test can fail: break a locator or expected text and see it go red.
-4. Then generate 3 more specs with the Generator agent (or your AI tool) from your p3e1 plan and review each with the checklist. Log all defects in {{defect-log.md}}.`,
+4. Then generate 3 more specs with the Generator agent (or your AI tool) from your Phase 3 exercise 1 plan and review each with the checklist. Log all defects in {{defect-log.md}}.`,
       criteria: ["6+ defects identified in the sample", "Fixed test uses getByRole/getByPlaceholder and web-first assertions", "Mutation check done and noted", "defect-log.md has at least 5 entries from AI-generated tests, each with a prompt-guardrail idea"],
       hints: [
         "Look at: the sleep, the CSS chain, hard-coded credentials, the assertion, the missing URL check, the vague test name.",

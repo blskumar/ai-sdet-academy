@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI SDET Academy</title>
+<script>try{var t=localStorage.getItem("ai-sdet-academy-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
 :root{
   --bg:#f7f7f4; --panel:#ffffff; --ink:#1c1f23; --muted:#5f6670; --line:#e1e1da;
@@ -96,14 +97,19 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
 .timer{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
 .timer .clock{font:700 28px/1 ui-monospace,Consolas,Menlo,monospace;min-width:110px}
 .days{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin:8px 0}
-.day{border-radius:6px;background:var(--line);height:44px;position:relative;overflow:hidden;border:2px solid transparent}
-.day i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);opacity:.55}
+.day{border-radius:6px;background:var(--line);height:44px;position:relative;overflow:hidden;border:1px solid var(--muted)}
+.day i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);opacity:.8}
 .day.met i{opacity:1}
-.day.today-cell{border-color:var(--ink)}
+.day.today-cell{border:2px solid var(--ink)}
 .daylbl{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center}
 .cups{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
 .cup{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
-.cup.locked{opacity:.75}
+.cup.locked svg{opacity:.45}
+@media (max-width:480px){
+  header.top{position:static}
+  .layout{min-height:auto}
+  .days,.daylbl{gap:2px}
+}
 .cup b{display:block;font-size:14px;margin-top:4px}
 .cup span{font-size:12px;color:var(--muted)}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -169,17 +175,26 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     if (isObj(o.notes)) Object.keys(o.notes).forEach(function(x){ if (HINTS[x] !== undefined && typeof o.notes[x] === "string") s.notes[x] = o.notes[x].slice(0, 20000); });
     if (isObj(o.log)) Object.keys(o.log).forEach(function(x){
       var v = Number(o.log[x]);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(x) && isFinite(v) && v > 0) s.log[x] = Math.min(1440, Math.round(v*10)/10);
+      if (realDate(x) && isFinite(v) && v > 0) s.log[x] = Math.min(1440, Math.round(v*100)/100);
     });
     if (isObj(o.cups)) Object.keys(o.cups).forEach(function(x){
-      if (CUPS.some(function(c){ return c.id === x; }) && /^\d{4}-\d{2}-\d{2}$/.test(String(o.cups[x]))) s.cups[x] = String(o.cups[x]);
+      if (CUPS.some(function(c){ return c.id === x; }) && realDate(String(o.cups[x]))) s.cups[x] = String(o.cups[x]);
     });
     if (isObj(o.timer)){
-      var st = Number(o.timer.start), ac = Number(o.timer.acc);
-      s.timer.acc = isFinite(ac) && ac > 0 ? Math.min(86400, ac) : 0;
-      s.timer.start = isFinite(st) && st > 0 && st <= Date.now() ? st : null;
+      var st = Number(o.timer.start), ac = Number(o.timer.acc), now = Date.now();
+      s.timer.acc = isFinite(ac) && ac > 0 ? Math.min(MAX_SESSION, ac) : 0;
+      // a running start in the future or older than 24 h is a forgotten or corrupt timer: drop it
+      s.timer.start = isFinite(st) && st > 0 && st <= now && now - st < 86400000 ? st : null;
     }
     return s;
+  }
+  // YYYY-MM-DD that is a real calendar day and not in the future (local time)
+  function realDate(x){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(x); if (!m) return false;
+    var d = new Date(+m[1], +m[2]-1, +m[3]);
+    var back = d.getFullYear() + "-" + (d.getMonth()+1 < 10 ? "0" : "") + (d.getMonth()+1) + "-" + (d.getDate() < 10 ? "0" : "") + d.getDate();
+    var t = new Date(), today = t.getFullYear() + "-" + (t.getMonth()+1 < 10 ? "0" : "") + (t.getMonth()+1) + "-" + (t.getDate() < 10 ? "0" : "") + t.getDate();
+    return back === x && x <= today;
   }
   var S = blank();   // real state is loaded below, after CUPS is defined (sanitize needs it)
   function load(){
@@ -210,6 +225,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
 
   // ---------- daily streak (goal: 60 min a day) ----------
   var GOAL = 60;
+  var MAX_SESSION = 4 * 3600;   // one session counts at most 4 h, so a forgotten timer cannot award a day or a cup
   // Fictional rewards. Earned once the best streak reaches the day count, kept for good.
   var CUPS = [
     {id:"bronze",   days:3,   name:"Bronze Sprint Cup",           color:"#b0703a"},
@@ -220,11 +236,13 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     {id:"legend",   days:100, name:"Legendary Eval-Hunter Cup",   color:"#c05cd6"}
   ];
   S = load();
+  awardCups(true);   // re-check after load so imported/old data shows the right cups
   function pad(n){ return (n < 10 ? "0" : "") + n; }
   function ds(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
   function dayNum(k){ var p = k.split("-"); return Math.round(Date.UTC(+p[0], +p[1]-1, +p[2]) / 86400000); }
   function met(k){ return (S.log[k] || 0) >= GOAL; }
-  function elapsedSec(){ return S.timer.acc + (S.timer.start ? Math.max(0, (Date.now() - S.timer.start) / 1000) : 0); }
+  function rawSec(){ return S.timer.acc + (S.timer.start ? Math.max(0, (Date.now() - S.timer.start) / 1000) : 0); }
+  function elapsedSec(){ return Math.min(MAX_SESSION, rawSec()); }
   function todayMin(){ return (S.log[ds(new Date())] || 0) + elapsedSec() / 60; }
   function streakInfo(){
     var c = new Date(), cur = 0;
@@ -234,18 +252,25 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     keys.forEach(function(n){ run = (prev !== null && n === prev + 1) ? run + 1 : 1; prev = n; if (run > best) best = run; });
     return {cur: cur, best: Math.max(best, cur)};
   }
-  function awardCups(){
+  function awardCups(silent){          // returns the names of cups newly earned; does not toast, the caller does
     var best = streakInfo().best, won = [];
     CUPS.forEach(function(c){ if (best >= c.days && !S.cups[c.id]){ S.cups[c.id] = ds(new Date()); won.push(c.name); } });
-    if (won.length) toast("Reward unlocked: " + won.join(", "));
-    return won.length;
+    return won;
   }
-  function commitTimer(){            // shortcut: a session that runs past midnight is credited to the day it is saved
-    var e = elapsedSec();
-    if (e > 0){ var k = ds(new Date()); S.log[k] = Math.min(1440, Math.round(((S.log[k] || 0) + e / 60) * 10) / 10); }
+  function credit(k, min){ S.log[k] = Math.min(1440, Math.round(((S.log[k] || 0) + min) * 100) / 100); }
+  function commitTimer(){
+    var e = elapsedSec(), now = new Date();
+    if (e > 0){
+      var started = S.timer.start ? new Date(S.timer.start) : now;
+      if (ds(started) !== ds(now)){      // session crossed midnight: split it so yesterday's goal still counts
+        var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        var after = Math.min(e, Math.max(0, (now.getTime() - midnight) / 1000));
+        credit(ds(now), after / 60); credit(ds(started), (e - after) / 60);
+      } else credit(ds(now), e / 60);
+    }
     S.timer = {start: null, acc: 0};
   }
-  function addMinutes(n){ var k = ds(new Date()); S.log[k] = Math.min(1440, Math.round(((S.log[k] || 0) + n) * 10) / 10); }
+  function addMinutes(n){ credit(ds(new Date()), n); }
   function fmtClock(sec){ sec = Math.floor(sec); return pad(Math.floor(sec/3600)) + ":" + pad(Math.floor(sec%3600/60)) + ":" + pad(sec%60); }
   function cupSvg(color){
     return '<svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true"><path d="M16 8h32v14c0 10-7 18-16 18S16 32 16 22z" fill="'+color+'"/>'
@@ -261,8 +286,10 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     h += '<div class="today card" style="padding:14px 16px"><strong>Today: <span id="tToday">'+Math.floor(mins)+'</span> / '+GOAL+' min</strong>'
       + '<div class="bar" style="margin:8px 0"><i id="tBar" style="width:'+pct+'%"></i></div>'
       + '<div class="timer"><span class="clock" id="tClock" role="timer" aria-label="Session timer">'+fmtClock(elapsedSec())+'</span>'
-      + (running ? '<button class="btn" data-a="t-pause">Pause</button>' : '<button class="btn primary" data-a="t-start">'+(S.timer.acc>0?'Resume':'Start studying')+'</button>')
-      + '<button class="btn" data-a="t-save"'+(elapsedSec()<1?' disabled':'')+'>Save session</button></div>'
+      + (running || S.timer.acc > 0
+          ? '<button class="btn primary" data-a="t-stop">Stop &amp; save</button>'
+          : '<button class="btn primary" data-a="t-start">Start studying</button>')
+      + '<span style="color:var(--muted);font-size:13px">'+(running ? 'Running. Time counts toward your streak only after you stop &amp; save (max 4 h per session).' : 'A session counts up to 4 hours.')+'</span></div>'
       + '<div class="timer"><span>Studied offline? Add:</span>'
       + [10,15,30,60].map(function(n){ return '<button class="btn" data-a="add-min" data-n="'+n+'">+'+n+' min</button>'; }).join("")
       + '<button class="btn" data-a="reset-today">Reset today</button></div>'
@@ -271,10 +298,10 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     for (var i = 13; i >= 0; i--){
       var d = new Date(today); d.setDate(today.getDate() - i);
       var k = ds(d), m = S.log[k] || 0, fill = Math.min(100, Math.round(m / GOAL * 100));
-      cells += '<div class="day'+(m>=GOAL?' met':'')+(i===0?' today-cell':'')+'" title="'+k+': '+Math.floor(m)+' min" aria-label="'+k+': '+Math.floor(m)+' minutes'+(m>=GOAL?', goal met':'')+'"><i style="height:'+fill+'%"></i></div>';
+      cells += '<div class="day'+(m>=GOAL?' met':'')+(i===0?' today-cell':'')+'" role="img" title="'+k+': '+Math.floor(m)+' min" aria-label="'+k+': '+Math.floor(m)+' minutes'+(m>=GOAL?', goal met':'')+'"><i style="height:'+fill+'%"></i></div>';
       labels += '<span>'+"SMTWTFS".charAt(d.getDay())+'</span>';
     }
-    h += '<h3 style="margin:18px 0 4px">Last 14 days</h3><div class="days">'+cells+'</div><div class="daylbl" aria-hidden="true">'+labels+'</div>';
+    h += '<h3 style="margin:18px 0 4px">Last 14 days</h3><div class="days" role="group" aria-label="Minutes studied per day, last 14 days">'+cells+'</div><div class="daylbl" aria-hidden="true">'+labels+'</div>';
     h += '<h3 style="margin:22px 0 4px">Rewards</h3><div class="cups">' + CUPS.map(function(c){
       var got = S.cups[c.id];
       return '<div class="cup'+(got?'':' locked')+'">'+(got ? cupSvg(c.color) : cupSvg("#8a9099"))
@@ -284,12 +311,17 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   }
   function updateChip(){
     var chip = document.getElementById("streakChip"); if (!chip) return;
-    var si = streakInfo(), m = Math.floor(todayMin());
-    chip.textContent = "Streak " + si.cur + (S.timer.start ? " · " + fmtClock(elapsedSec()) : " · " + m + "/" + GOAL + " min");
-    chip.classList.toggle("met", m >= GOAL);
-    chip.setAttribute("aria-label", "Daily streak: " + si.cur + " days. Today " + m + " of " + GOAL + " minutes.");
+    var si = streakInfo(), m = Math.floor(todayMin()), saved = Math.floor(S.log[ds(new Date())] || 0);
+    var txt = "Streak " + si.cur + (S.timer.start ? " · " + fmtClock(elapsedSec()) : " · " + m + "/" + GOAL + " min");
+    if (chip.textContent !== txt) chip.textContent = txt;
+    chip.classList.toggle("met", saved >= GOAL);      // "met" only for saved time, matching the streak itself
+    var lbl = "Daily streak: " + si.cur + " days. Today " + m + " of " + GOAL + " minutes." + (S.timer.start ? " Session timer running." : "");
+    if (chip.getAttribute("aria-label") !== lbl) chip.setAttribute("aria-label", lbl);
   }
+  var lastDay = ds(new Date());
   function updateLive(){
+    if (document.hidden) return;
+    if (ds(new Date()) !== lastDay){ lastDay = ds(new Date()); refresh(); return; }   // midnight: redraw grid, streak, today
     updateChip();
     if (view.phase !== "streak") return;
     var m = todayMin(), a = document.getElementById("tToday"), b = document.getElementById("tBar"), c = document.getElementById("tClock");
@@ -445,15 +477,17 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   function focusKey(){
     var a = document.activeElement;
     if (!a || !a.getAttribute || !a.getAttribute("data-a")) return null;
-    return ["data-a","data-k","data-e","data-id","data-j"].map(function(n){ return a.getAttribute(n); });
+    return ["data-a","data-k","data-e","data-id","data-j","data-n"].map(function(n){ return a.getAttribute(n); });
   }
   function restoreFocus(k){
     if (!k) return;
-    var names = ["data-a","data-k","data-e","data-id","data-j"];
+    var names = ["data-a","data-k","data-e","data-id","data-j","data-n"];
+    var swap = {"t-start":"t-stop", "t-stop":"t-start"};   // Start and Stop & save replace each other
     var c = document.querySelectorAll('[data-a="'+k[0]+'"]');
     for (var i=0;i<c.length;i++){
       if (names.every(function(n,j){ return c[i].getAttribute(n) === k[j]; })){ c[i].focus(); return; }
     }
+    if (swap[k[0]]){ var sw = document.querySelector('[data-a="'+swap[k[0]]+'"]'); if (sw){ sw.focus(); return; } }
     // hint button turns into a "show approach/solution" button: keep focus on the same exercise's help control
     if (k[2]){
       var h = document.querySelector('[data-e="'+k[2]+'"][data-a="hint"], [data-e="'+k[2]+'"][data-a="help"]');
@@ -462,7 +496,13 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   }
   function refresh(){ var f = focusKey(); withOpenState(function(){ renderMain(); }); renderSide(); renderTop(); updateChip(); restoreFocus(f); }
 
-  function toast(t){ var e=el("toast"); e.textContent=t; e.classList.add("on"); setTimeout(function(){ e.classList.remove("on"); },1800); }
+  var toastTimer = null;
+  function toast(t){
+    var e=el("toast"); e.textContent=t; e.classList.add("on");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ e.classList.remove("on"); }, 2600);
+  }
+  // one combined message when a save also unlocks cups
+  function saved(msg, won){ toast(won.length ? msg + ". Reward unlocked: " + won.join(", ") : msg); }
 
   // ---------- events ----------
   document.addEventListener("click", function(ev){
@@ -483,13 +523,13 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
       try { navigator.clipboard.writeText(t).then(function(){ toast("Copied"); }); } catch(x){ toast("Copy not available"); }
     }
     else if (a==="view-streak"){ view.phase="streak"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
-    else if (a==="t-start"){ S.timer.start=Date.now(); save(); refresh(); }
-    else if (a==="t-pause"){ S.timer.acc=elapsedSec(); S.timer.start=null; save(); refresh(); }
-    else if (a==="t-save"){ commitTimer(); awardCups(); save(); refresh(); toast("Session saved"); }
-    else if (a==="add-min"){ addMinutes(+b.getAttribute("data-n")); awardCups(); save(); refresh(); }
-    else if (a==="reset-today"){ if (confirm("Reset today's minutes to zero?")){ delete S.log[ds(new Date())]; S.timer={start:null,acc:0}; save(); refresh(); } }
+    else if (a==="t-start"){ S.timer.start=Date.now(); S.timer.acc=0; save(); refresh(); }
+    else if (a==="t-stop"){ commitTimer(); var w1=awardCups(); save(); refresh(); saved("Session saved", w1); }
+    else if (a==="add-min"){ addMinutes(+b.getAttribute("data-n")); var w2=awardCups(); save(); refresh(); saved("Added " + b.getAttribute("data-n") + " min", w2); }
+    else if (a==="reset-today"){ if (confirm("Reset today's minutes to zero? Your timer will stop. Other days, streak history and earned cups are not changed.")){ delete S.log[ds(new Date())]; S.timer={start:null,acc:0}; save(); refresh(); } }
     else if (a==="export"){
-      var blob = new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+      var exp = Object.assign({}, S, {timer:{start:null, acc:0}});   // never export a running timer
+      var blob = new Blob([JSON.stringify(exp,null,2)],{type:"application/json"});
       var u = URL.createObjectURL(blob), l = document.createElement("a");
       l.href=u; l.download="ai-sdet-academy-progress.json"; l.click(); setTimeout(function(){ URL.revokeObjectURL(u); }, 1000);
     }
@@ -509,7 +549,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
         var data;
         try { data = JSON.parse(r.result); } catch(x){ toast("Invalid file"); t.value=""; return; }
         if (!isObj(data)){ toast("Invalid file"); t.value=""; return; }
-        if (confirm("Replace your current progress with the imported file?")){ S=sanitize(data); save(); renderAll(); toast("Progress imported"); }
+        if (confirm("Replace your current progress, streak and any running timer with the imported file?")){ S=sanitize(data); awardCups(); save(); renderAll(); toast("Progress imported"); }
         t.value = "";
       };
       r.readAsText(t.files[0]);
@@ -531,6 +571,8 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     view.tab = ["learn","exercises","resources"].indexOf(h[1])!==-1 ? h[1] : "learn";
   }
   window.addEventListener("hashchange", function(){ fromHash(); renderAll(); });
+  // another tab changed progress: take its data instead of overwriting it on the next save
+  window.addEventListener("storage", function(e){ if (e.key === KEY){ S = load(); renderAll(); } });
   fromHash(); renderAll();
 })();
 </script>
