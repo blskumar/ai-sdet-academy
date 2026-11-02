@@ -6,7 +6,24 @@ window.PHASES.push({
   id: "p1", n: 1, title: "Prompting & LLM basics", weeks: "Weeks 1-2",
   goal: "Understand what an LLM actually does, then learn to measure how much its output varies.",
   deliverable: "Write-up 'Why the same prompt gives different tests' + a versioned prompt library.",
-  setup: R`## One-time setup (used by every phase)
+  setup: R`## Before you start
+- **Prerequisites:** Python 3.11+, Node 18+ (Phase 3), Git, a GitHub account (Phases 4 and 7), a terminal. Commands are shown for Windows PowerShell; on macOS/Linux use the equivalent activate and env-var syntax.
+- **Pace:** the plan assumes 8-10 hours a week. The time on each exercise is a guess; double it the first time.
+- **API call budget:** variance and eval exercises make many calls (about 100 in Phase 1 exercises 2 and 3, up to 150 in Phase 6 exercise 1, 150+ in Phase 7). Free models have daily limits. Start with 2-3 runs per item, scale up once the code works, and cache results to disk.
+- **Folder layout:** one project folder for everything. Later exercises import earlier files, so use these names:
+
+~~~text
+llm.py          shared client + ask()              (phase 1)
+story_to_tests.py  generate() with repair loop     (phase 2)
+server.py       your MCP server                    (phase 3)
+judge.py        DeepEval judge wrapper             (phase 4)
+checks.py       deterministic checks on cases      (phase 4)
+golden.jsonl    golden dataset                     (phase 4)
+rag.py          retriever + answer()               (phase 5)
+traces.jsonl    written by the tracer              (phase 7)
+~~~
+
+## One-time setup (used by every phase)
 1. Install Python 3.11+ and create a project folder with a venv.
 2. Get a free key at openrouter.ai and pick a model that supports **tools** (filter on the models page). Free models change often, so never hard-code one.
 3. Set environment variables (PowerShell):
@@ -165,7 +182,7 @@ Expected finding: temp 0 is higher but rarely 1.0. Say that in your write-up.`
     {
       id: "p1e3", title: "Prompt library: zero-shot vs few-shot", time: "2 h",
       goal: "Build a versioned prompt that returns valid JSON test cases and prove few-shot helps.",
-      task: R`1. Create {{prompts/gen_cases.v1.txt}} (zero-shot) and {{prompts/gen_cases.v2.txt}} (with 2 examples).
+      task: R`1. Create {{prompts/gen_cases.v1.txt}} (zero-shot) and {{prompts/gen_cases.v2.txt}} (with 2 examples). Put a placeholder named STORY in double curly braces where the story goes, and replace it in code before each call.
 2. Output must be a JSON object with a "cases" list; each case has title, priority, steps, expected. Priority is P0, P1 or P2.
 3. Write a validator (Pydantic or hand-written) that checks the shape.
 4. Run each prompt version 10 times on 5 stories. Record: % valid JSON, % schema-valid, average number of cases.
@@ -290,7 +307,7 @@ Design for testability: pass the LLM function in as a parameter ({{generate(stor
 3. Implement the repair loop: on invalid output, send the error back, max 2 retries.
 4. Add a {{--out file.json}} option and exit code 1 if still invalid.
 5. Add a timeout and basic retry on API errors (not on validation errors).`,
-      criteria: ["Valid output on 3 different stories", "Repair loop proven by forcing a bad first reply (can use the mock from p2e3)", "Non-zero exit code on final failure, raw output saved", "Timeout set on API call"],
+      criteria: ["Valid output on 3 different stories", "Repair loop proven by forcing a bad first reply (a small stub function that returns bad JSON first is enough; full tests come in p2e3)", "Non-zero exit code on final failure, raw output saved", "Timeout set on API call"],
       hints: [
         "{{argparse}} gives you the CLI quickly. Keep the generate() function separate from main() so you can test generate() later.",
         "In the repair prompt include both the previous raw output and the exact Pydantic error text ({{str(e)}}). The model fixes errors much better when it sees them.",
@@ -385,10 +402,13 @@ SPEC = [{"type": "function", "function": {
                    "properties": {"url": {"type": "string"}, "expect_status": {"type": "integer"}},
                    "required": ["url"]}}}]
 
-def agent(question, max_steps=5):
+def default_model_call(msgs):
+    return get_client().chat.completions.create(model=MODEL, messages=msgs, tools=SPEC).choices[0].message
+
+def agent(question, max_steps=5, model_call=default_model_call):   # model_call is injectable: tests pass a fake
     msgs = [{"role": "user", "content": question}]
     for _ in range(max_steps):
-        m = get_client().chat.completions.create(model=MODEL, messages=msgs, tools=SPEC).choices[0].message
+        m = model_call(msgs)
         if not m.tool_calls:
             return m.content
         msgs.append(m.model_dump(exclude_none=True))
@@ -401,6 +421,14 @@ def agent(question, max_steps=5):
             print("TOOL", tc.function.name, tc.function.arguments, "->", result)
             msgs.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
     raise RuntimeError("max steps reached")
+
+# test: a fake model that never stops asking for the tool must hit the guard
+from types import SimpleNamespace as NS
+def test_max_steps_guard():
+    call = NS(id="1", function=NS(name="run_api_check", arguments='{"url": "https://httpbin.org/status/200"}'))
+    endless = lambda msgs: NS(content=None, tool_calls=[call], model_dump=lambda exclude_none=True: {"role": "assistant"})
+    import pytest
+    with pytest.raises(RuntimeError): agent("loop", max_steps=3, model_call=endless)
 ~~~`
     },
     {
@@ -434,6 +462,9 @@ def test_prose_wrapped(): assert generate("x", FakeLLM(["Sure! " + GOOD + " Hope
 def test_repair():
     f = FakeLLM(["not json", GOOD]); generate("x", f)
     assert len(f.prompts) == 2 and "invalid" in f.prompts[1]
+def test_repair_prompt_has_previous_output():
+    f = FakeLLM(["not json at all", GOOD]); generate("x", f)
+    assert "not json at all" in f.prompts[1]
 def test_gives_up():
     with pytest.raises(RuntimeError): generate("x", FakeLLM(["bad"] * 3))
 
@@ -466,6 +497,13 @@ window.PHASES.push({
   id: "p3", n: 3, title: "MCP & Playwright Agents", weeks: "Weeks 5-6",
   goal: "Connect AI to tools through MCP, use AI to explore and write Playwright tests, and learn to review what it produces.",
   deliverable: "AI-generated Playwright specs you reviewed and fixed, a defect log of what the AI got wrong, and your own MCP server.",
+  setup: R`## Setup for this phase
+1. **Node 18+** and a new folder for the Playwright project. In it run {{npm init playwright@latest}} (choose TypeScript) and then {{npx playwright install}} to download browsers.
+2. **An MCP host.** These exercises use **Claude Code** (commands shown as {{claude mcp add ...}}). Other hosts (Claude Desktop, VS Code, Cursor) work too; each has its own place to register servers, so follow its docs and use the same server command.
+3. **Playwright Agents** (planner, generator, healer): in the Playwright project run the agents init command from playwright.dev/docs/test-agents for your AI tool (it looks like {{npx playwright init-agents --loop=claude}}; flags depend on your Playwright version, so check the docs). It adds agent definition files to your repo.
+4. For exercise 2 (your MCP server) use the Python venv from Phase 1 and {{pip install mcp requests}}.
+
+If something differs from the docs, trust the docs: these tools change fast.`,
   learn: [
     { t: "What MCP is", md: R`## Model Context Protocol
 An open standard for connecting AI apps to tools and data. Think "USB-C for AI tools".
