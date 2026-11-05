@@ -253,7 +253,7 @@ def run(version, stories, n=10):
   ],
   resources: [
     ["Prompting Guide", "https://www.promptingguide.ai"],
-    ["Anthropic: prompt engineering overview", "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview"],
+    ["Anthropic: prompt engineering overview", "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview"],
     ["OpenRouter model list", "https://openrouter.ai/models"],
     ["Tokenizer playground (see tokens)", "https://platform.openai.com/tokenizer"],
   ],
@@ -509,9 +509,9 @@ def pytest_collection_modifyitems(config, items):
     },
   ],
   resources: [
-    ["OpenAI function calling guide", "https://platform.openai.com/docs/guides/function-calling"],
-    ["Anthropic tool use overview", "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"],
-    ["Pydantic docs", "https://docs.pydantic.dev"],
+    ["OpenAI function calling guide", "https://developers.openai.com/api/docs/guides/function-calling"],
+    ["Anthropic tool use overview", "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview"],
+    ["Pydantic docs", "https://pydantic.dev/docs/"],
     ["pytest: custom markers and options", "https://docs.pytest.org/en/stable/example/simple.html"],
   ],
 });
@@ -524,7 +524,7 @@ window.PHASES.push({
 1. **Node 18+** and a new folder for the Playwright project. In it run {{npm init playwright@latest}} (choose TypeScript) and then {{npx playwright install}} to download browsers.
 2. **An MCP host.** These exercises use **Claude Code** (commands shown as {{claude mcp add ...}}). Other hosts (Claude Desktop, VS Code, Cursor) work too; each has its own place to register servers, so follow its docs and use the same server command.
 3. **Playwright Agents** (planner, generator, healer): in the Playwright project run the agents init command from playwright.dev/docs/test-agents for your AI tool (it looks like {{npx playwright init-agents --loop=claude}}; flags depend on your Playwright version, so check the docs). It adds agent definition files to your repo.
-4. For exercise 2 (your MCP server) use the Python venv from Phase 1 and {{pip install mcp requests}}.
+4. For exercise 2 (your MCP server) use the Python venv from Phase 1 and run {{pip install "mcp<2" requests}}. The code below uses the 1.x import {{from mcp.server.fastmcp import FastMCP}}. In mcp 2.x that class was renamed: use {{from mcp.server.mcpserver import MCPServer}} and {{MCPServer("name")}}; the {{@mcp.tool()}} decorator and {{mcp.run()}} stay the same. (Both were checked: the server below passes a real stdio client test on mcp 1.30, and the 2.x rename registers the same tools.)
 
 If something differs from the docs, trust the docs: these tools change fast.`,
   learn: [
@@ -610,7 +610,7 @@ Typical human additions: locked_out_user message, problem_user broken images, pe
     {
       id: "p3e2", title: "Build your own MCP server", time: "2.5 h",
       goal: "Expose your {{run_api_check}} function as an MCP tool and call it from an AI tool.",
-      task: R`1. {{pip install mcp requests}}.
+      task: R`1. {{pip install "mcp<2" requests}} (see the Phase 3 setup card for the mcp 2.x rename).
 2. Create {{server.py}} using FastMCP exposing the tool {{run_api_check(url, expect_status)}} (reuse the allow-list from Phase 2).
 3. Test it with the MCP Inspector.
 4. Register it with your AI tool and ask in plain language to check two URLs.

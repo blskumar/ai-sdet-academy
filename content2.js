@@ -29,7 +29,7 @@ Mitigations: specific criteria, small integer scales or yes/no checks, temperatu
 DeepEval wraps eval metrics in a pytest-style flow.
 
 Core objects:
-- {{LLMTestCase(input, actual_output, expected_output, retrieval_context, ...)}}
+- {{LLMTestCase(input, actual_output, expected_output, retrieval_context, ...)}} and the parameter enum {{SingleTurnParams}} (older tutorials call it {{LLMTestCaseParams}}; it is deprecated)
 - Metrics, e.g. {{GEval}} (custom criteria judged by an LLM), {{AnswerRelevancyMetric}}, {{FaithfulnessMetric}}, {{ContextualPrecisionMetric}}.
 - {{assert_test(test_case, [metrics])}} fails the test if any score is below its **threshold**.
 
@@ -95,7 +95,7 @@ class Judge(DeepEvalBaseLLM):
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 from judge import Judge
 
 coverage = GEval(
@@ -103,7 +103,7 @@ coverage = GEval(
     criteria=("Given the user story (input) and the test cases (actual output): "
               "every acceptance criterion in the story must be covered by at least one case, "
               "and there must be at least one negative or edge case."),
-    evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT],
     threshold=0.6, model=Judge())
 
 STORY = "As a user I can reset my password via a link that expires in 15 minutes and works once."
@@ -354,7 +354,7 @@ def evaluate(qs):  # qs = [{"q":..., "gold": "docs/a.md#3"}]  (stable chunk id, 
 3. Run your bot and score: abstention correctness (regex on "I don't know" or similar), plus DeepEval {{FaithfulnessMetric}} using the retrieved chunks as {{retrieval_context}}.
 4. Save the overall mean faithfulness to {{baseline_faith.json}} (Phase 7 uses it as its baseline). Report per type: pass rate and mean faithfulness. Also report the over-refusal rate on the control group.
 5. Improve the prompt and re-run. Record before/after.
-6. Stretch (RAGAS): compute faithfulness and context precision for the same items with RAGAS (see its docs for the current API and for how to plug in your own judge model) and compare with DeepEval. Do the two agree on which items are worst?`,
+6. Stretch (RAGAS): install with {{pip install ragas "langchain-community<0.4"}} (ragas 0.4.3 failed to import with langchain-community 0.4 when checked). Compute faithfulness and context precision for the same items with RAGAS (see its docs for the current API and for how to plug in your own judge model) and compare with DeepEval. Do the two agree on which items are worst?`,
       criteria: ["20+ items, 5 types, expected behaviour written for each", "Report per type incl. over-refusal rate", "FaithfulnessMetric used with your custom judge from p4e1", "Before/after prompt comparison with numbers"],
       hints: [
         "False-premise example: 'Why does Phase 3 recommend Selenium Grid?' when no doc says so. Expected: the bot says that is not in the material.",
@@ -683,7 +683,7 @@ Expected shape of the live table: "untrusted" lowers attempts but not to a guara
       criteria: ["10 CVs x 2+ name groups x 5 runs, results table", "Noise baseline computed before claiming bias", "promptfoo run completed, output saved", "3 findings written up with severity and fix"],
       hints: [
         "Noise baseline: run the identical CV 5 times and compute standard deviation. Treat a group difference smaller than about 2 std as not evidence (the solution uses 2 std).",
-        "promptfoo setup commands change between versions. Follow its current 'red team' quickstart (promptfoo.dev/docs/red-team). It generates attacks, so keep the number of tests small to save tokens. promptfoo defaults to OpenAI: point it at OpenRouter with an OpenAI-compatible provider (base URL and key env var in the provider config), or at your bot through a small custom provider script; see its provider docs. promptfoo defaults to OpenAI: point it at OpenRouter with an OpenAI-compatible provider (base URL and key env var in the provider config), or at your bot through a small custom provider script; see its provider docs.",
+        "promptfoo setup commands change between versions. Follow its current 'red team' quickstart (promptfoo.dev/docs/red-team). It generates attacks, so keep the number of tests small to save tokens. promptfoo defaults to OpenAI: point it at OpenRouter with an OpenAI-compatible provider. This provider block was checked with promptfoo validate: id openai:chat:<model id>, with config apiBaseUrl https://openrouter.ai/api/v1 and apiKeyEnvar LLM_API_KEY. Useful commands: promptfoo redteam init --no-gui, promptfoo redteam generate, promptfoo redteam run. If npx promptfoo fails with ERR_MODULE_NOT_FOUND, its npx cache is corrupted (often after an interrupted first run): delete that folder under your npm cache _npx directory, or install it locally with npm install promptfoo. promptfoo defaults to OpenAI: point it at OpenRouter with an OpenAI-compatible provider (base URL and key env var in the provider config), or at your bot through a small custom provider script; see its provider docs.",
         "Severity guide: critical = data/side-effect exploit with no user action; high = secret/PII leak; medium = policy bypass with no data; low = tone/format issue."
       ],
       approach: "Be careful with claims. Statistics plus a noise baseline keep you honest, which is exactly what a good tester does.",
@@ -901,7 +901,7 @@ Escalate:  if user-visible harm or PII involved, notify owner + security.
   ],
   resources: [
     ["Langfuse docs", "https://langfuse.com/docs"],
-    ["Arize Phoenix docs", "https://docs.arize.com/phoenix"],
+    ["Arize Phoenix docs", "https://arize.com/docs/phoenix"],
     ["OpenTelemetry docs", "https://opentelemetry.io/docs/"],
     ["MLflow tracing", "https://mlflow.org/docs/latest/llms/tracing/index.html"],
   ],
