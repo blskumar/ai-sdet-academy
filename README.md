@@ -1,6 +1,10 @@
-# AI SDET Academy
+# SDET Academy
 
 Static learning app: 7 phases, 21 exercises, 3 progressive hints + approach + solution per exercise.
+
+- **Home and free demo:** the app opens on a home page; the logo always returns to it. Phase 1 (Prompting and LLM basics) is a free demo chapter. Phases 2 to 7 ask for a sign-in.
+- **Sign-in is a local profile, not a secure account.** It stores a display name in this browser (no password, no server). The site is static files, so the locked chapters are still in the page source: the sign-in is a product gate, not protection. Signing out never deletes progress. To add real accounts later, replace `getUser`, `signIn` and `signOut` in `index.html` (design in `docs/design-home-demo-signin.md`). Change which chapters are free with `FREE`.
+- The logo is in `logo.svg` (the page uses an inline copy that follows the theme).
 
 Run: open `index.html`, or `python -m http.server 8765` in this folder and visit http://127.0.0.1:8765.
 

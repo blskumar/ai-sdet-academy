@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>AI SDET Academy</title>
+<title>SDET Academy</title>
 <script>try{var t=localStorage.getItem("ai-sdet-academy-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
 :root{
@@ -34,7 +34,6 @@ a{color:var(--accent)}
 button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 header.top{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
-header.top h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
 .overall{flex:1;min-width:160px;max-width:360px}
 .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
@@ -113,6 +112,34 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
 }
 .cup b{display:block;font-size:14px;margin-top:4px}
 .cup span{font-size:12px;color:var(--muted)}
+a.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);border-radius:10px;padding:2px 4px}
+a.logo:hover{background:var(--accent-soft)}
+a.logo svg{width:38px;height:38px;display:block}
+.wordmark b{display:block;font-size:18px;font-weight:800;letter-spacing:1px;line-height:1.05}
+.wordmark i{display:block;font-style:normal;font-size:11px;font-weight:700;letter-spacing:3px;color:var(--accent)}
+.ph svg{width:12px;height:12px}
+.authbox{display:flex;align-items:center;gap:8px}
+.who{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:var(--muted)}
+.hero-home{display:flex;gap:20px;align-items:center;flex-wrap:wrap;padding:8px 0 4px}
+.hero-home svg{width:84px;height:84px;flex:none}
+.hero-home h2{margin:0 0 6px;font-size:30px;line-height:1.15}
+.hero-home p{margin:4px 0;color:var(--muted);max-width:60ch}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.cta .btn{padding:10px 18px;font-size:16px}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin:10px 0}
+button.home-card{display:block;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+button.home-card:hover{border-color:var(--accent)}
+button.home-card b{display:block;margin:4px 0 2px}
+button.home-card span.d{display:block;font-size:13px;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--code-bg);color:var(--muted)}
+.tag.free{background:var(--accent);color:var(--accent-ink)}
+.tag svg{width:11px;height:11px}
+.steps3{padding-left:20px;margin:6px 0}
+.lock-panel{max-width:560px;margin:30px auto;padding:24px;text-align:center}
+.lock-panel svg{width:40px;height:40px;color:var(--accent)}
+.lock-panel h2{margin:8px 0}
+.lock-panel p{color:var(--muted)}
+.err{color:var(--warn);font-size:14px;margin:6px 0 0;min-height:1.2em}
 .form{padding:14px 16px}
 .form label.f{display:block;margin:10px 0 2px;font-weight:600;font-size:14px}
 .form input[type=text],.form input[type=password],.form input[type=url]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
@@ -138,10 +165,11 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
 </head>
 <body>
 <header class="top">
-  <h1>AI SDET Academy</h1>
+  <a class="logo" id="logoLink" href="#home" aria-label="SDET Academy, home"><span id="logoMark" aria-hidden="true"></span><span class="wordmark"><b>SDET</b><i>ACADEMY</i></span></a>
   <div class="overall"><div class="bar"><i id="overallBar"></i></div><small id="overallTxt"></small></div>
   <button class="btn chipbtn" id="streakChip" data-a="view-streak" title="Daily streak and rewards"></button>
   <div class="tools">
+    <span id="authBox" class="authbox"></span>
     <label class="themebox">Theme
       <select id="themeSel" aria-label="Theme">
         <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
@@ -622,36 +650,129 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     return {pct: Math.round((read+done)/(secs+ex)*100), read:read, secs:secs, done:done, ex:ex};
   }
   function overall(){
-    var t=0,d=0; P.forEach(function(p){ var s=phaseStats(p); t+=s.secs+s.ex; d+=s.read+s.done; });
+    var t=0,d=0; P.forEach(function(p){ if (isLocked(p.id)) return; var s=phaseStats(p); t+=s.secs+s.ex; d+=s.read+s.done; });   // locked chapters do not count while signed out
     return {pct: t? Math.round(d/t*100):0, d:d, t:t};
   }
+
+  // ---------- brand, local profile (demo gate), home and sign-in ----------
+  // One badge, used in the header and on the home page (theme colours) and as the page icon (fixed colours).
+  var BADGE = '<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect width="64" height="64" rx="15" fill="var(--accent)"/>'
+    + '<path d="M16 34l11 11 21-23" fill="none" stroke="var(--accent-ink)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<circle cx="48" cy="15" r="9" fill="none" stroke="#f2b705" stroke-width="2" opacity=".55"/><circle cx="48" cy="15" r="4.5" fill="#f2b705"/></svg>';
+  var LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  (function(){
+    var fav = BADGE.replace(/var\(--accent\)/g, "#2f6b4f").replace(/var\(--accent-ink\)/g, "#ffffff").replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
+    var l = document.createElement("link"); l.rel = "icon"; l.href = "data:image/svg+xml," + encodeURIComponent(fav);
+    document.head.appendChild(l);
+    document.getElementById("logoMark").innerHTML = BADGE;
+  })();
+
+  var USER_KEY = "ai-sdet-academy-user", FREE = ["p1"], memUser = null;   // FREE = chapters open without signing in
+  // Local profile only: static hosting has no server, so this is a product gate, not security.
+  function getUser(){
+    var r; try { r = localStorage.getItem(USER_KEY); } catch(e){ return memUser; }
+    if (!r) return memUser;                  // memUser is set only when storage could not persist the profile
+    try { var o = JSON.parse(r); if (isObj(o) && typeof o.name === "string"){ var n = o.name.trim(); if (n && n.length <= 60) return {name: n}; } } catch(e){}
+    return null;                             // corrupt, foreign or over-long data counts as signed out
+  }
+  function signIn(name){
+    name = String(name).trim();
+    if (!name || name.length > 60) return 0;
+    memUser = null;
+    try { localStorage.setItem(USER_KEY, JSON.stringify({name: name, t: Date.now()})); return 1; }
+    catch(e){ memUser = {name: name}; return 2; }      // 2 = signed in for this page session only (storage blocked)
+  }
+  function signOut(){ memUser = null; try { localStorage.removeItem(USER_KEY); } catch(e){} }
+  function isLocked(phaseId){ return !getUser() && FREE.indexOf(phaseId) === -1; }
+
+  function renderHeader(){
+    var u = getUser(), box = document.getElementById("authBox");
+    box.innerHTML = u
+      ? '<span class="who" title="' + esc(u.name) + '">' + esc(u.name) + '</span><button class="btn" data-a="signout">Sign out</button>'
+      : '<button class="btn primary" data-a="go-signin">Sign in</button>';
+  }
+  function homeHtml(){
+    var u = getUser();
+    var h = '<div class="hero-home">' + BADGE + '<div><h2>Become the SDET who can test AI</h2>'
+      + '<p>A hands-on path from test automation to AI quality engineering: 7 phases, 21 exercises, hints at every step, and a daily streak to keep you going.</p></div></div>';
+    h += '<div class="cta"><button class="btn primary" data-a="phase" data-id="' + FREE[0] + '">' + (u ? 'Continue learning' : 'Try the free demo chapter') + '</button>'
+      + (u ? '' : '<button class="btn" data-a="go-signin">Sign in to unlock everything</button>') + '</div>'
+      + (u ? '' : '<p style="color:var(--muted);font-size:13px;margin:-6px 0 0">Signing in creates a local profile on this device (a display name, no password, no server).</p>');
+    h += '<h3 style="margin:22px 0 4px">The course</h3><div class="home-grid">' + P.map(function(p){
+      var free = FREE.indexOf(p.id) !== -1, locked = isLocked(p.id);
+      var tag = free ? '<span class="tag free">Free demo</span>' : locked ? '<span class="tag">' + LOCK + 'Sign in</span>' : '<span class="tag free">Open</span>';
+      return '<button class="home-card" data-a="phase" data-id="' + p.id + '">' + tag + '<b>' + p.n + '. ' + esc(p.title) + '</b><span class="d">' + esc(p.goal) + '</span></button>';
+    }).join("") + '</div>';
+    h += '<h3 style="margin:22px 0 4px">How it works</h3><ol class="steps3"><li>Read a short lesson.</li><li>Build the exercise, using hints only when you are stuck.</li><li>Study at least an hour a day to grow your streak and earn cups.</li></ol>';
+    return h;
+  }
+  function lockHtml(p){
+    return '<div class="card lock-panel">' + LOCK + '<h2>Phase ' + p.n + ' is for signed-in learners</h2>'
+      + '<p>' + esc(p.title) + ' is part of the full course. Phase 1 is a free demo, so you can try the whole experience first. Sign in with a display name to unlock Phases 2 to 7.</p>'
+      + '<p style="font-size:13px">Signing in creates a local profile on this device. It is not a secure account: no password, no server.</p>'
+      + '<div class="cta" style="justify-content:center"><button class="btn primary" data-a="go-signin">Sign in to continue</button>'
+      + '<button class="btn" data-a="phase" data-id="' + FREE[0] + '">Back to the free demo</button></div></div>';
+  }
+  function signinHtml(){
+    return '<div class="phase-head"><h2>Sign in</h2><p>Create your learner profile to unlock Phases 2 to 7.</p></div>'
+      + '<form id="signinForm" class="card form" novalidate style="max-width:480px">'
+      + '<label class="f" for="siName">Display name</label>'
+      + '<input id="siName" name="name" type="text" maxlength="60" autocomplete="name" aria-describedby="siHelp siErr" aria-invalid="false" spellcheck="false">'
+      + '<p id="siErr" class="err" role="alert"></p>'
+      + '<div class="row"><button class="btn primary" type="submit">Continue</button><button class="btn" type="button" data-a="phase" data-id="' + FREE[0] + '">Back to the free demo</button></div>'
+      + '<div id="siHelp" class="note-warn"><strong>This is a local profile, not a secure account.</strong> Your name is stored only in this browser. It does not protect the course content, which is still in the page. It simply unlocks the full course here. Signing out never deletes your progress.</div>'
+      + '</form>';
+  }
+  function goTo(phase, tab, replace){
+    view.phase = phase; view.tab = tab || "learn";
+    var h = SPECIALS.indexOf(phase) !== -1 ? "#" + phase : "#" + phase + "/" + view.tab;
+    try { if (location.hash !== h) history[replace ? "replaceState" : "pushState"](null, "", h); } catch(e){}
+    renderAll(); window.scrollTo(0, 0); el("main").focus();
+  }
+  function wantedTarget(){                      // where to go after sign-in: the locked phase the visitor asked for, else Phase 1
+    var n = view.next; view.next = null;
+    if (n && P.some(function(p){ return p.id === n.phase; }) && !isLocked(n.phase)) return n;
+    return {phase: FREE[0], tab: "learn"};
+  }
+  var SPECIALS = ["home", "signin", "streak", "live"];
 
   // ---------- render ----------
   function el(id){ return document.getElementById(id); }
   function renderSide(){
     var si = streakInfo();
-    el("side").innerHTML = '<button class="ph" data-a="view-streak" aria-current="'+(view.phase==="streak")+'">'
+    el("side").innerHTML = '<button class="ph" data-a="go-home" aria-current="'+(view.phase==="home")+'"><b>Home</b><span>Overview of the course</span></button>'
+      + '<button class="ph" data-a="view-streak" aria-current="'+(view.phase==="streak")+'">'
       + '<b>Daily streak</b><span>'+si.cur+' day'+(si.cur===1?'':'s')+' &middot; goal '+GOAL+' min a day</span></button>'
       + '<button class="ph" data-a="view-live" aria-current="'+(view.phase==="live")+'">'
       + '<b>API key &amp; live checks</b><span>'+(getSecret() ? 'Key saved' + (llm.model ? ' &middot; ' + esc(llm.model.slice(0, 28)) : '') : 'Optional &middot; no key yet')+'</span></button>'
       + P.map(function(p){
       var s = phaseStats(p);
+      if (isLocked(p.id)){      // locked: no progress shown, just the way in
+        return '<button class="ph" data-a="phase" data-id="'+p.id+'" aria-current="'+(view.phase===p.id)+'">'
+          + '<b>'+p.n+'. '+esc(p.title)+'</b><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:12px;display:inline-flex">'+LOCK+'</span>Sign in to unlock</span></button>';
+      }
       return '<button class="ph" data-a="phase" data-id="'+p.id+'" aria-current="'+(view.phase===p.id)+'">'
-        + '<b>'+p.n+'. '+esc(p.title)+'</b><span>'+p.weeks+' &middot; '+s.pct+'%</span>'
+        + '<b>'+p.n+'. '+esc(p.title)+'</b><span>'+p.weeks+' &middot; '+s.pct+'%'+(FREE.indexOf(p.id)!==-1 && !getUser() ? ' &middot; free demo' : '')+'</span>'
         + '<div class="bar"><i style="width:'+s.pct+'%"></i></div></button>';
     }).join("");
   }
   function renderTop(){
     var o = overall();
     el("overallBar").style.width = o.pct+"%";
-    el("overallTxt").textContent = o.pct+"% complete ("+o.d+" of "+o.t+" items)";
+    el("overallTxt").textContent = o.pct+"% complete ("+o.d+" of "+o.t+" items"+(getUser() ? "" : ", demo chapter")+")";
   }
   function currentPhase(){ return P.filter(function(p){ return p.id===view.phase; })[0]; }
 
   function renderMain(){
+    if (view.phase === "signin" && getUser()){ view.phase = "home"; try { history.replaceState(null, "", "#home"); } catch(e){} }   // already signed in
+    if (view.phase === "home"){ el("main").innerHTML = homeHtml(); return; }
+    if (view.phase === "signin"){ el("main").innerHTML = signinHtml(); return; }
     if (view.phase === "streak"){ el("main").innerHTML = streakHtml(); return; }
     if (view.phase === "live"){ el("main").innerHTML = liveHtml(); renderLiveResults(); return; }
-    var p = currentPhase(), s = phaseStats(p);
+    var p = currentPhase();
+    if (!p){ view.phase = "home"; el("main").innerHTML = homeHtml(); return; }
+    if (isLocked(p.id)){ el("main").innerHTML = lockHtml(p); return; }
+    var s = phaseStats(p);
     var h = '<div class="phase-head"><h2>Phase '+p.n+': '+esc(p.title)+'</h2><p>'+p.weeks+'</p><p>'+esc(p.goal)+'</p>'
       + '<div class="deliv"><strong>Deliverable:</strong> '+esc(p.deliverable)+'</div></div>';
     var tabs = [["learn","Learn ("+s.read+"/"+s.secs+")"],["exercises","Exercises ("+s.done+"/"+s.ex+")"],["resources","Resources"]];
@@ -756,7 +877,7 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
   document.addEventListener("click", function(ev){
     var b = ev.target.closest("[data-a]"); if (!b) return;
     var a = b.getAttribute("data-a"), id = b.getAttribute("data-id"), e = b.getAttribute("data-e");
-    if (a==="phase"){ view.phase=id; view.tab="learn"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
+    if (a==="phase"){ view.next = null; view.phase=id; view.tab="learn"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
     else if (a==="tab"){ view.tab=id; setHash(); var f=focusKey(); renderAll(); restoreFocus(f); }
     else if (a==="read"){ var k=b.getAttribute("data-k"); S.read[k]=!S.read[k]; save(); refresh(); }
     else if (a==="done"){ S.done[e]=!S.done[e]; save(); refresh(); }
@@ -769,6 +890,17 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
     else if (a==="copy"){
       var t = b.parentNode.querySelector("code").textContent;
       try { navigator.clipboard.writeText(t).then(function(){ toast("Copied"); }); } catch(x){ toast("Copy not available"); }
+    }
+    else if (a==="go-home"){ view.next = null; goTo("home"); }
+    else if (a==="go-signin"){
+      var wanted = P.some(function(p){ return p.id === view.phase; }) && isLocked(view.phase);
+      if (view.phase !== "signin") view.next = wanted ? {phase: view.phase, tab: view.tab} : null;   // remember the locked chapter asked for; keep it if already on the sign-in page
+      goTo("signin");
+      var nameBox = document.getElementById("siName"); if (nameBox) nameBox.focus();
+    }
+    else if (a==="signout"){
+      signOut(); toast("Signed out. Your progress is kept."); renderAll();
+      var si2 = document.querySelector('#authBox button'); if (si2) si2.focus();     // the Sign out button was replaced: keep keyboard focus in the header
     }
     else if (a==="view-streak"){ view.phase="streak"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
     else if (a==="view-live"){ view.phase="live"; setHash(); renderAll(); window.scrollTo(0,0); el("main").focus(); }
@@ -809,24 +941,42 @@ textarea{width:100%;min-height:80px;padding:8px;border:1px solid var(--line);bor
       r.readAsText(t.files[0]);
     }
   });
+  document.addEventListener("submit", function(ev){
+    if (ev.target.id !== "signinForm") return;
+    ev.preventDefault();
+    var box = document.getElementById("siName"), err = document.getElementById("siErr"), name = box.value.trim();
+    if (!name || name.length > 60){
+      err.textContent = name ? "Use at most 60 characters." : "Enter a display name (1 to 60 characters).";
+      box.setAttribute("aria-invalid", "true"); box.focus(); return;
+    }
+    var mode = signIn(name), t = wantedTarget();
+    goTo(t.phase, t.tab, true);                 // replace, so Back does not return to the sign-in page
+    toast(mode === 2 ? "Signed in for this session only: this browser blocks storage, so you will be signed out on reload." : "Signed in. Welcome, " + name + ".");
+  });
   document.addEventListener("input", function(ev){
     var t = ev.target;
     if (t.getAttribute("data-a")==="note"){ S.notes[t.getAttribute("data-e")]=t.value; save(); }
+    if (t.id==="siName"){ t.setAttribute("aria-invalid","false"); var er=document.getElementById("siErr"); if (er) er.textContent=""; }
   });
 
-  function renderAll(){ renderSide(); renderTop(); renderMain(); updateChip(); }
+  function renderAll(){ renderHeader(); renderSide(); renderTop(); renderMain(); updateChip(); }
   function setHash(){
-    var h = (view.phase === "streak" || view.phase === "live") ? "#"+view.phase : "#"+view.phase+"/"+view.tab;
+    var h = SPECIALS.indexOf(view.phase) !== -1 ? "#"+view.phase : "#"+view.phase+"/"+view.tab;
     if (location.hash !== h) { try { history.pushState(null, "", h); } catch(e){} }
   }
   function fromHash(){
     var h = location.hash.replace("#","").split("/");
-    view.phase = h[0]==="streak" || h[0]==="live" || P.some(function(p){ return p.id===h[0]; }) ? h[0] : P[0].id;
+    // an empty or unknown address opens the home page
+    view.phase = SPECIALS.indexOf(h[0]) !== -1 || P.some(function(p){ return p.id===h[0]; }) ? h[0] : "home";
     view.tab = ["learn","exercises","resources"].indexOf(h[1])!==-1 ? h[1] : "learn";
   }
-  window.addEventListener("hashchange", function(){ fromHash(); renderAll(); });
-  // another tab changed progress: take its data instead of overwriting it on the next save
-  window.addEventListener("storage", function(e){ if (e.key === KEY){ S = load(); renderAll(); } });
+  window.addEventListener("hashchange", function(){ fromHash(); renderAll(); window.scrollTo(0,0); });
+  // another tab changed progress or the profile: take its data instead of overwriting it on the next save
+  window.addEventListener("storage", function(e){
+    if (e.key === null){ S = load(); renderAll(); }               // storage was cleared in another tab
+    else if (e.key === KEY){ S = load(); renderAll(); }
+    else if (e.key === USER_KEY){ renderAll(); }
+  });
   fromHash(); renderAll();
 })();
 </script>

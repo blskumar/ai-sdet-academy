@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 64" width="196" height="64" role="img" aria-label="SDET Academy">
+  <title>SDET Academy</title>
+  <style>
+    .sdet{fill:#1c1f23}
+    .acad{fill:#2f6b4f}
+    @media (prefers-color-scheme: dark){ .sdet{fill:#e8e9ec} .acad{fill:#6fc79a} }
+  </style>
+  <rect width="64" height="64" rx="15" fill="#2f6b4f"/>
+  <path d="M16 34l11 11 21-23" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="15" r="9" fill="none" stroke="#f2b705" stroke-width="2" opacity=".55"/>
+  <circle cx="48" cy="15" r="4.5" fill="#f2b705"/>
+  <text class="sdet" x="78" y="30" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="26" font-weight="800" letter-spacing="1">SDET</text>
+  <text class="acad" x="78" y="53" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="20" font-weight="600" letter-spacing="2">ACADEMY</text>
+</svg>
