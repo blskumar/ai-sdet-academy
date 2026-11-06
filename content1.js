@@ -31,7 +31,7 @@ cache.py        optional: cache LLM calls          (below)
 
 ## One-time setup (used by every phase)
 1. Install Python 3.11+ and create a project folder with a venv.
-2. Get a free key at openrouter.ai and pick a model that supports **tools** (filter on the models page). Free models change often, so never hard-code one.
+2. Get a free key at openrouter.ai and pick a model that supports **tools** (filter on the models page). Free models change often, so never hard-code one. The **API key & live checks** page in the sidebar walks you through creating a key, lists free tool-capable models, and tests your setup in the browser.
 3. Set environment variables (PowerShell):
 
 ~~~powershell
